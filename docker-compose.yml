@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13-alpine
+    container_name: earlybird-postgres
+    environment:
+      POSTGRES_USER: earlybird
+      POSTGRES_PASSWORD: earlybird_dev
+      POSTGRES_DB: earlybird_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U earlybird"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - earlybird-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: earlybird-backend
+    environment:
+      DATABASE_URL: postgresql://earlybird:earlybird_dev@postgres:5432/earlybird_db
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - earlybird-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: earlybird-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - earlybird-network
+
+volumes:
+  postgres_data:
+
+networks:
+  earlybird-network:
+    driver: bridge
