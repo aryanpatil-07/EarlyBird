@@ -1,150 +1,162 @@
+#!/usr/bin/env python3
 """
-Script to load Kaggle Credit Card Fraud Dataset into EarlyBird database.
-
-Phase 0: Data loading for initial setup.
+Load Kaggle Credit Card Fraud dataset into PostgreSQL.
 
 Usage:
-    python load_kaggle_dataset.py <path_to_csv>
+    python scripts/load_kaggle_dataset.py <csv_path> [limit]
+    
+Example:
+    python scripts/load_kaggle_dataset.py data/creditcard.csv 10000
 
-The script:
-1. Reads CSV file
-2. Parses transactions
-3. Inserts into PostgreSQL transactions table
-4. Prints summary statistics
+This script:
+1. Reads the Kaggle creditcard.csv file
+2. Maps columns: Time -> timestamp, Amount -> amount, Class -> label
+3. Creates entities for each unique card_id
+4. Inserts transactions into PostgreSQL
+5. Prints row counts and sample rows
 """
 
 import sys
 import os
-import csv
-from datetime import datetime, timedelta
-import random
 from pathlib import Path
+from datetime import datetime, timedelta
+import pandas as pd
+import json
+import hashlib
 
-# Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+# Add backend to path so we can import app modules
+backend_path = Path(__file__).parent.parent / "backend"
+sys.path.insert(0, str(backend_path))
 
-from app.models import Transaction
-from app.database import SessionLocal, engine, init_db
+from app.database import SessionLocal, engine
+from app.models import Base, Entity, Transaction
+from sqlalchemy import text
 
+def hash_card_id(index):
+    """Generate a deterministic but obfuscated card ID from index."""
+    return f"CARD_{hashlib.md5(str(index).encode()).hexdigest()[:12].upper()}"
 
-def load_dataset(csv_path: str, sample_size: int = None):
-    """Load Kaggle dataset into database."""
+def load_kaggle_dataset(csv_path: str, limit: int = 10000):
+    """Load Kaggle dataset into PostgreSQL."""
     
+    print(f"[*] Loading Kaggle dataset from: {csv_path}")
+    print(f"[*] Limit: {limit} rows")
+    
+    # Check file exists
     if not os.path.exists(csv_path):
-        print(f"Error: File not found: {csv_path}")
+        print(f"[!] Error: {csv_path} not found")
         sys.exit(1)
-
-    # Initialize database
-    print("Initializing database schema...")
-    init_db()
-    print("Database initialized.")
-
+    
+    # Read CSV
+    print("[*] Reading CSV...")
+    df = pd.read_csv(csv_path, nrows=limit)
+    print(f"[*] Loaded {len(df)} rows from CSV")
+    print(f"[*] Columns: {list(df.columns)}")
+    
+    # Get database session
     db = SessionLocal()
     
     try:
-        print(f"\nLoading dataset from: {csv_path}")
+        # Initialize database schema if needed
+        print("[*] Ensuring database schema exists...")
+        Base.metadata.create_all(bind=engine)
         
-        row_count = 0
-        inserted_count = 0
-        error_count = 0
-        base_date = datetime(2024, 1, 1)
-        
-        with open(csv_path, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            
-            if not reader.fieldnames:
-                print("Error: CSV file is empty")
-                return
-            
-            print(f"CSV columns: {reader.fieldnames}")
-            
-            for row in reader:
-                row_count += 1
-                
-                # Skip header or empty rows
-                if row_count == 1 or not row.get('Time'):
-                    continue
-                
-                # Optional: sample if sample_size specified
-                if sample_size and row_count > sample_size:
-                    break
-                
-                try:
-                    # Parse Kaggle dataset columns
-                    time_seconds = int(float(row.get('Time', 0)))
-                    amount = float(row.get('Amount', 0))
-                    label = int(float(row.get('Class', 0)))
-                    
-                    # Generate realistic timestamp
-                    transaction_timestamp = base_date + timedelta(seconds=time_seconds)
-                    
-                    # Create transaction
-                    transaction = Transaction(
-                        transaction_id=f"TXN-{row_count:08d}",
-                        card_id=f"CARD-{random.randint(1000000, 9999999):07d}",
-                        merchant_id=f"MERCH-{random.randint(1, 10000):05d}",
-                        amount=amount,
-                        timestamp=transaction_timestamp,
-                        label=label
-                    )
-                    
-                    db.add(transaction)
-                    inserted_count += 1
-                    
-                    # Batch commit every 1000 rows
-                    if inserted_count % 1000 == 0:
-                        db.commit()
-                        print(f"  Inserted {inserted_count} transactions...")
-                    
-                except Exception as e:
-                    error_count += 1
-                    if error_count <= 5:  # Print first 5 errors
-                        print(f"  Error on row {row_count}: {e}")
-                    continue
-        
-        # Final commit
+        # Clear existing transactions and entities (fresh load)
+        print("[*] Clearing existing transactions and entities...")
+        db.execute(text("DELETE FROM transactions"))
+        db.execute(text("DELETE FROM entities"))
         db.commit()
         
-        print(f"\n=== Dataset Loading Summary ===")
-        print(f"Total rows processed: {row_count}")
-        print(f"Transactions inserted: {inserted_count}")
-        print(f"Errors: {error_count}")
+        # Create entities (one per unique card)
+        print("[*] Creating card entities...")
+        unique_cards = set()
+        for idx in df.index:
+            card_id = hash_card_id(idx % 1000)  # Group cards by mod 1000 to keep unique count manageable
+            unique_cards.add(card_id)
         
-        # Print statistics
+        entities = []
+        for card_id in sorted(unique_cards):
+            entity = Entity(
+                entity_type="card",
+                entity_identifier=card_id
+            )
+            entities.append(entity)
+        
+        db.bulk_save_objects(entities)
+        db.commit()
+        print(f"[+] Created {len(entities)} card entities")
+        
+        # Insert transactions
+        print("[*] Inserting transactions...")
+        
+        # Base timestamp: Jan 1, 2024
+        base_timestamp = datetime(2024, 1, 1, 0, 0, 0)
+        
+        transactions = []
+        for idx, row in df.iterrows():
+            # Time column is seconds since base time
+            # Calculate timestamp from Time value
+            time_delta = timedelta(seconds=int(row['Time']))
+            timestamp = base_timestamp + time_delta
+            
+            # Generate transaction ID
+            transaction_id = f"TX_{idx:07d}"
+            
+            # Get card ID
+            card_id = hash_card_id(idx % 1000)
+            
+            # Create transaction
+            tx = Transaction(
+                transaction_id=transaction_id,
+                card_id=card_id,
+                merchant_id=None,  # Not provided in Kaggle dataset
+                amount=float(row['Amount']),
+                timestamp=timestamp,
+                label=int(row['Class']),  # 0 = legitimate, 1 = fraud
+            )
+            transactions.append(tx)
+        
+        db.bulk_save_objects(transactions)
+        db.commit()
+        print(f"[+] Inserted {len(transactions)} transactions")
+        
+        # Verify counts
+        print("\n[*] Verification:")
+        tx_count = db.query(Transaction).count()
+        entity_count = db.query(Entity).count()
         fraud_count = db.query(Transaction).filter(Transaction.label == 1).count()
         legit_count = db.query(Transaction).filter(Transaction.label == 0).count()
-        total = fraud_count + legit_count
         
-        print(f"\n=== Data Statistics ===")
-        print(f"Total transactions: {total}")
-        print(f"Fraudulent: {fraud_count} ({100*fraud_count/total:.2f}%)")
-        print(f"Legitimate: {legit_count} ({100*legit_count/total:.2f}%)")
+        print(f"  - Total transactions: {tx_count}")
+        print(f"  - Total entities (cards): {entity_count}")
+        print(f"  - Fraudulent: {fraud_count} ({100*fraud_count/tx_count:.2f}%)")
+        print(f"  - Legitimate: {legit_count} ({100*legit_count/tx_count:.2f}%)")
         
-        # Sample a few transactions
-        print(f"\n=== Sample Transactions ===")
-        samples = db.query(Transaction).limit(3).all()
+        # Show sample rows
+        print("\n[*] Sample transactions:")
+        samples = db.query(Transaction).limit(5).all()
         for tx in samples:
-            print(f"  {tx.transaction_id}: Card {tx.card_id}, Amount ${tx.amount:.2f}, Timestamp {tx.timestamp}, Label {tx.label}")
+            label_str = "FRAUD" if tx.label == 1 else "LEGIT"
+            print(f"  {tx.transaction_id}: ${tx.amount:.2f} @ {tx.timestamp} [{label_str}] (Card: {tx.card_id})")
         
-        print("\n✓ Dataset loaded successfully!")
+        print("\n[+] Dataset loaded successfully!")
         
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"[!] Error during load: {e}")
         db.rollback()
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
     finally:
         db.close()
 
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python load_kaggle_dataset.py <path_to_csv> [sample_size]")
-        print("\nExample:")
-        print("  python load_kaggle_dataset.py ../data/creditcard.csv")
-        print("  python load_kaggle_dataset.py ../data/creditcard.csv 10000  (load first 10000 rows)")
+        print("Usage: python scripts/load_kaggle_dataset.py <csv_path> [limit]")
+        print("Example: python scripts/load_kaggle_dataset.py data/creditcard.csv 10000")
         sys.exit(1)
     
     csv_path = sys.argv[1]
-    sample_size = int(sys.argv[2]) if len(sys.argv) > 2 else None
+    limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10000
     
-    load_dataset(csv_path, sample_size)
+    load_kaggle_dataset(csv_path, limit)

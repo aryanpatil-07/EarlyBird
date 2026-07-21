@@ -6,6 +6,8 @@
 
 EarlyBird detects anomalous credit card transactions against a rolling baseline, provides explainable root cause links (correlated activities that plausibly explain each anomaly), and routes them through a two-tier triage system: REVIEWER analysts accept/reject/escalate cases; TEAM_LEAD resolves escalations and authors playbook rules that guide future reviewer decisions. Every decision is audited and every resolved case automatically generates a knowledge base entry, making the system a growing institutional record of fraud patterns and resolutions, not just a sequence of individual alerts.
 
+**Getting started:** See [`LOCAL_SETUP.md`](LOCAL_SETUP.md) for local development setup. For project design & architecture, read the documentation in [`docs/`](docs/) — start with [`docs/01-Vision-and-Problem-Statement.md`](docs/01-Vision-and-Problem-Statement.md).
+
 ## Reading Order
 
 Start here if you're **coming in cold** (first time reading the project):
