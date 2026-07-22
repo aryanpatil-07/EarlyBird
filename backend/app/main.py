@@ -82,6 +82,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Register routers
+from app.routers import cases_router
+app.include_router(cases_router)
+
 
 # Health check endpoint
 @app.get("/health", tags=["health"])
@@ -99,19 +103,6 @@ async def root():
         "docs": "/docs",
         "version": "0.1.0"
     }
-
-
-# Placeholder endpoints (will be populated in subsequent phases)
-@app.get("/cases", tags=["cases"])
-async def get_cases():
-    """Placeholder: Get cases queue (implemented in M3)."""
-    return {"message": "Cases endpoint — coming in Phase 3"}
-
-
-@app.get("/anomalies", tags=["anomalies"])
-async def get_anomalies():
-    """Placeholder: Get anomalies (implemented in M1)."""
-    return {"message": "Anomalies endpoint — coming in Phase 1"}
 
 
 if __name__ == "__main__":
