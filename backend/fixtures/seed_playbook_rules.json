@@ -1,0 +1,58 @@
+[
+  {
+    "name": "High-Value Card Usage",
+    "description": "Alert when a single card transaction exceeds $5,000. High-value transactions are inherently riskier and warrant additional scrutiny.",
+    "condition_json": {
+      "amount_min": 5000
+    },
+    "recommendation": "Verify cardholder authorization for high-value transaction. Check merchant category and geographic location against card holder profile.",
+    "priority": 9
+  },
+  {
+    "name": "Rapid Multi-Transaction Pattern",
+    "description": "Detect when the same card is used for 3+ transactions within a 1-hour window. This pattern can indicate card cloning or testing.",
+    "condition_json": {
+      "rapid_multi_tx": true
+    },
+    "recommendation": "Review all transactions in the burst. Rapid-fire usage across different merchants is a strong fraud indicator. Consider card block/replacement.",
+    "priority": 8
+  },
+  {
+    "name": "Merchant Mismatch Variation",
+    "description": "Flag cases where an anomalous transaction is followed by different merchant usage than typical pattern. Suggests account compromise.",
+    "condition_json": {
+      "merchant_mismatch": true
+    },
+    "recommendation": "Compare merchants against historical card usage. If significantly different, contact cardholder to verify. High probability of unauthorized use.",
+    "priority": 7
+  },
+  {
+    "name": "Card Testing Pattern",
+    "description": "Identify sequences of small transactions ($1-$20) in quick succession. Classic card testing attack: attacker validates stolen card with micro-charges.",
+    "condition_json": {
+      "amount_min": 1,
+      "amount_max": 20,
+      "rapid_multi_tx": true
+    },
+    "recommendation": "This is a strong fraud indicator. Recommend immediate card block and cardholder notification. Review all recent transactions for unauthorized use.",
+    "priority": 9
+  },
+  {
+    "name": "High Z-Score Anomaly",
+    "description": "Transactions with z-score > 5.0 indicate extreme deviation from baseline (>5 standard deviations). Very rare and high-risk.",
+    "condition_json": {
+      "high_z_score": 5.0
+    },
+    "recommendation": "Extreme anomaly detected. Strong probability of fraud. Contact cardholder immediately for verification. Prepare for escalation if unauthorized.",
+    "priority": 10
+  },
+  {
+    "name": "Geographic Anomaly",
+    "description": "Transaction from a location significantly distant from cardholder's typical usage area (e.g., international after domestic-only history).",
+    "condition_json": {
+      "entity_type": "card"
+    },
+    "recommendation": "Verify geographic plausibility. If cardholder was traveling, expected pattern. If not, high fraud risk. Check merchant and transaction details.",
+    "priority": 6
+  }
+]
