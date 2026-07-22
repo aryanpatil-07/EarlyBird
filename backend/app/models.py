@@ -111,14 +111,18 @@ class PlaybookRule(Base):
     __tablename__ = "playbook_rules"
 
     id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(String(500))
     condition_json = Column(JSON, nullable=False)  # e.g., {"entity_type": "card", "amount_min": 5000}
-    recommendation = Column(Text, nullable=False)
-    created_by = Column(String(50), nullable=False)  # user_id
+    recommendation = Column(String(500), nullable=False)
+    priority = Column(Integer, default=5)  # 1-10 priority level
+    enabled = Column(Integer, default=1)  # 1=enabled, 0=disabled (soft delete)
+    created_by_id = Column(Integer, nullable=False)  # user ID of Team Lead
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __repr__(self):
-        return f"<PlaybookRule(id={self.id}, created_by={self.created_by})>"
+        return f"<PlaybookRule(id={self.id}, name={self.name}, priority={self.priority})>"
 
 
 class KnowledgeBase(Base):
