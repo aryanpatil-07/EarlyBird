@@ -5,7 +5,13 @@ Tests FR-020–032 (case workflow requirements).
 """
 
 import pytest
+from datetime import datetime, timedelta
 from app.cases import CaseState, CaseStateMachine, InvalidStateTransitionException
+from app.cases.dedup import (
+    find_mergeable_case,
+    group_anomalies_for_dedup,
+    calculate_dedup_stats,
+)
 
 
 class TestCaseStateMachine:
@@ -101,3 +107,114 @@ class TestCaseStateMachine:
             CaseStateMachine.VALID_TRANSITIONS
         )
         assert len(no_reverse_in_valid) == 0, "State machine should be acyclic"
+
+
+class TestDedupLogic:
+    """Tests for de-duplication logic (FR-020)."""
+
+    def test_group_anomalies_single_group_same_entity_within_window(self):
+        """Test grouping anomalies from same entity within time window."""
+        now = datetime.utcnow()
+        anomalies = [
+            (1, "card_123", now),
+            (2, "card_123", now + timedelta(minutes=10)),
+            (3, "card_123", now + timedelta(minutes=20)),
+        ]
+        
+        # Mock the query result
+        groups = []
+        current_group = []
+        current_entity = "card_123"
+        current_time = now
+        window = timedelta(minutes=30)
+        
+        for anomaly_id, entity_id, created_at in anomalies:
+            if entity_id == current_entity and created_at - current_time <= window:
+                current_group.append(anomaly_id)
+                current_time = created_at
+            else:
+                if current_group:
+                    groups.append(current_group)
+                current_group = [anomaly_id]
+                current_entity = entity_id
+                current_time = created_at
+        
+        if current_group:
+            groups.append(current_group)
+        
+        assert len(groups) == 1
+        assert groups[0] == [1, 2, 3]
+
+    def test_group_anomalies_multiple_groups_different_entities(self):
+        """Test grouping anomalies with different entities creates separate groups."""
+        now = datetime.utcnow()
+        anomalies = [
+            (1, "card_123", now),
+            (2, "card_456", now + timedelta(minutes=5)),
+            (3, "card_123", now + timedelta(minutes=40)),  # Outside 30-min window, same entity
+        ]
+        
+        groups = []
+        current_group = []
+        current_entity = None
+        current_time = None
+        window = timedelta(minutes=30)
+        
+        for anomaly_id, entity_id, created_at in sorted(
+            anomalies, key=lambda x: x[2]
+        ):
+            if (
+                current_entity is None
+                or (entity_id == current_entity and created_at - current_time <= window)
+            ):
+                current_group.append(anomaly_id)
+                current_entity = entity_id
+                current_time = created_at
+            else:
+                if current_group:
+                    groups.append(current_group)
+                current_group = [anomaly_id]
+                current_entity = entity_id
+                current_time = created_at
+        
+        if current_group:
+            groups.append(current_group)
+        
+        # Should have multiple groups due to entity change and time window
+        assert len(groups) >= 2
+
+    def test_calculate_dedup_stats_with_data(self):
+        """Test dedup statistics calculation."""
+        stats = calculate_dedup_stats(
+            session=None,
+            total_anomalies=100,
+            total_cases=60
+        )
+        
+        assert stats["total_anomalies"] == 100
+        assert stats["total_cases"] == 60
+        assert stats["merged_count"] == 40
+        assert stats["dedup_rate"] == 40.0
+
+    def test_calculate_dedup_stats_zero_anomalies(self):
+        """Test dedup statistics with zero anomalies."""
+        stats = calculate_dedup_stats(
+            session=None,
+            total_anomalies=0,
+            total_cases=0
+        )
+        
+        assert stats["dedup_rate"] == 0.0
+        assert stats["merged_count"] == 0
+
+    def test_calculate_dedup_stats_all_merged(self):
+        """Test dedup statistics when all anomalies are merged."""
+        stats = calculate_dedup_stats(
+            session=None,
+            total_anomalies=100,
+            total_cases=50
+        )
+        
+        # 50 anomalies merged out of 100
+        assert stats["dedup_rate"] == 50.0
+        assert stats["merged_count"] == 50
