@@ -57,6 +57,10 @@ Thumbs.db
 *.sqlite
 postgres_data/
 
+# Large data files
+data/creditcard.csv
+data/*.csv
+
 # Logs
 *.log
 
