@@ -4,6 +4,7 @@ EarlyBird Fraud Detection Platform — Main FastAPI Application
 Phase 0: Scaffolding baseline with health check and CORS middleware.
 Phase 1: Detection cycle with APScheduler.
 Phase 2: Correlation cycle with APScheduler.
+Phase 3: SLA auto-escalation cycle with APScheduler.
 """
 
 from fastapi import FastAPI
@@ -13,6 +14,7 @@ from app.database import init_db, get_db
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.scheduler.detection_cycle import detection_cycle_callback
 from app.scheduler.correlation_cycle import correlation_cycle_callback
+from app.cases.sla import sla_escalation_callback
 import logging
 
 # Configure logging
@@ -49,6 +51,16 @@ async def lifespan(app: FastAPI):
             name='Correlation Cycle (Find Related Anomalies)'
         )
         logger.info("Correlation cycle scheduled (every 10 minutes)")
+        
+        # Start SLA escalation cycle: every 1 minute
+        scheduler.add_job(
+            sla_escalation_callback,
+            'interval',
+            minutes=1,
+            id='sla_escalation',
+            name='SLA Escalation (Auto-escalate cases exceeding 2-hour window)'
+        )
+        logger.info("SLA escalation cycle scheduled (every 1 minute)")
         
         # Start scheduler
         scheduler.start()
