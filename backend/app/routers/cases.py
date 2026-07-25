@@ -25,6 +25,8 @@ from app.models import Case, AuditLog, User
 from app.cases.state_machine import CaseStateMachine, CaseState, InvalidStateTransitionException
 from app.cases.concurrency import check_version, StaleEntityException, increment_version
 from app.cases.dedup import calculate_dedup_stats
+from app.knowledge_base import generate_kb_entry_from_case
+from app.models import KnowledgeBase
 import logging
 
 logger = logging.getLogger(__name__)
@@ -338,6 +340,22 @@ def resolve_case(
             },
         )
         db.add(audit)
+        
+        # Generate and insert KB entry (M5: FR-040)
+        # Must happen in same transaction: if KB write fails, resolve fails
+        try:
+            kb_entry = generate_kb_entry_from_case(case, db)
+            kb = KnowledgeBase(
+                case_id=case.case_id,
+                title=kb_entry["title"],
+                content=kb_entry["content"],
+            )
+            db.add(kb)
+        except Exception as kb_error:
+            db.rollback()
+            logger.error(f"Error generating KB entry for case {case_id}: {kb_error}")
+            raise HTTPException(status_code=500, detail=f"Failed to generate KB entry: {str(kb_error)}")
+        
         db.commit()
         
         logger.info(f"Case {case_id} resolved by {current_user.user_id}")
