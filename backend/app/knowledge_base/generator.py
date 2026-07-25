@@ -144,7 +144,7 @@ def _generate_markdown_content(case: Case, db: Session) -> str:
                     lines.append(f"{idx}. {rec}")
         else:
             lines.append(f"- {case.recommendations}")
-        lines.append()
+        lines.append("")
     
     # Evidence section
     lines.append("## Evidence & Analysis\n")
