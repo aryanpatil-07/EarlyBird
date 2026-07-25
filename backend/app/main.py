@@ -83,9 +83,10 @@ app.add_middleware(
 )
 
 # Register routers
-from app.routers import cases_router
+from app.routers import cases_router, knowledge_base_router
 from app.routers import playbooks
 app.include_router(cases_router)
+app.include_router(knowledge_base_router)
 app.include_router(playbooks.router)
 
 
