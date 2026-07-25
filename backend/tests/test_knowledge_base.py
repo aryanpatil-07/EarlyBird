@@ -175,7 +175,7 @@ class TestKBSearch:
         kb = KnowledgeBase(
             case_id=resolved_case.case_id,
             title="Suspicious Transaction Pattern",
-            content="Multiple transactions detected on the same card."
+            content="Multiple suspicious transactions detected on the same card. Pattern is highly suspicious."
         )
         db_session.add(kb)
         db_session.commit()
@@ -194,7 +194,7 @@ class TestKBSearch:
         kb = KnowledgeBase(
             case_id=resolved_case.case_id,
             title="Card Fraud Case",
-            content="Credit card used in multiple locations within short time window."
+            content="Credit card used in fraud case with multiple locations within short time window. Card fraud patterns detected."
         )
         db_session.add(kb)
         db_session.commit()
