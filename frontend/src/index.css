@@ -1,22 +1,220 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ===== CSS VARIABLES (Design System) ===== */
+@layer base {
+  :root {
+    /* Primary - Amber (Trust + Professional) */
+    --color-primary: #F59E0B;
+    --color-primary-light: #FCD34D;
+    --color-primary-dark: #D97706;
+
+    /* Secondary - Amber lighter */
+    --color-secondary: #FBBF24;
+
+    /* Accent - Purple (CTA + Action) */
+    --color-accent: #8B5CF6;
+    --color-accent-light: #A78BFA;
+    --color-accent-dark: #7C3AED;
+
+    /* Background (Dark Mode OLED) */
+    --color-background: #0F172A;
+    --color-background-alt: #1E293B;
+    --color-background-muted: #272F42;
+
+    /* Foreground (Text + Surface) */
+    --color-foreground: #F8FAFC;
+    --color-text-primary: #F8FAFC;
+    --color-text-secondary: #CBD5E1;
+    --color-text-muted: #94A3B8;
+
+    /* Semantic */
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+    --color-destructive: #EF4444;
+    --color-muted: #272F42;
+    --color-border: #334155;
+    --color-ring: #F59E0B;
+
+    /* Typography */
+    --font-heading: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    --font-body: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+    --shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+
+    /* Motion / Transitions */
+    --transition-fast: 150ms ease-in-out;
+    --transition-normal: 200ms ease-in-out;
+    --transition-slow: 300ms ease-out;
+  }
+}
+
+/* ===== RESET & BASE ===== */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-body);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: var(--font-mono);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+/* ===== ACCESSIBILITY ===== */
+@layer utilities {
+  /* Focus visible for all interactive elements */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2;
+    outline-color: var(--color-ring);
+  }
+
+  /* Keyboard focus for buttons & links */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply ring-2 ring-offset-2 ring-amber-500 rounded-md;
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Print styles */
+  @media print {
+    body {
+      @apply bg-white text-gray-900;
+    }
+  }
+
+  /* Touch target sizing (minimum 44px) */
+  button, a[role="button"], [role="menuitem"], [role="tab"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Cursor pointer on interactive */
+  button,
+  a,
+  [role="button"],
+  [role="menuitem"],
+  [role="tab"],
+  input[type="checkbox"],
+  input[type="radio"],
+  select,
+  [onclick] {
+    cursor: pointer;
+  }
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background-muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ===== ANIMATIONS ===== */
+@layer utilities {
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideInUp {
+    from { 
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInDown {
+    from { 
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from { 
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to { 
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn var(--transition-normal);
+  }
+
+  .animate-slide-in-up {
+    animation: slideInUp var(--transition-slow);
+  }
+
+  .animate-slide-in-down {
+    animation: slideInDown var(--transition-slow);
+  }
+
+  .animate-scale-in {
+    animation: scaleIn var(--transition-normal);
+  }
 }
