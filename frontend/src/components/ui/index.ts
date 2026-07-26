@@ -24,3 +24,4 @@ export {
   TableCell,
   TableCaption,
 } from './Table.tsx';
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs.tsx';
