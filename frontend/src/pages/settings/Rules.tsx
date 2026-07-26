@@ -7,13 +7,15 @@
  * - Create/Edit modal using Card overlay
  * - JSON validation
  * - Role-based access control
+ * 
+ * Dark fintech aesthetic: slate-800/30 cards, indigo-600 accents, slate-400 muted text
  */
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { apiClient } from '../../lib/api';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '../../components/ui/index';
-import { Trash2, Edit2, Plus, X } from 'lucide-react';
+import { Trash2, Edit2, Plus, X, AlertCircle } from 'lucide-react';
 
 interface PlaybookRule {
   id: string;
@@ -39,6 +41,7 @@ export const Settings: React.FC = () => {
   const [formData, setFormData] = useState({ conditionJson: '', recommendation: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const isTeamLead = userRole === 'TEAM_LEAD';
 
@@ -140,12 +143,9 @@ export const Settings: React.FC = () => {
     }
   };
 
-  // Handle Delete
+  // Handle Delete with confirmation
   const handleDelete = async (ruleId: string) => {
-    if (!window.confirm('Are you sure you want to delete this rule?')) {
-      return;
-    }
-
+    setDeleteConfirm(null);
     try {
       await apiClient.deletePlaybookRule(ruleId);
       setRules(rules.filter((r) => r.id !== ruleId));
@@ -156,10 +156,13 @@ export const Settings: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-50">⚙️ Playbook Rules</h1>
+      <div className="p-6 space-y-6">
+        <h1 className="text-3xl font-bold text-slate-100">⚙️ Playbook Rules</h1>
         <div className="flex items-center justify-center py-12">
-          <div className="animate-pulse text-gray-600 dark:text-gray-400">Loading rules...</div>
+          <div className="animate-spin">
+            <div className="border-4 border-slate-500/30 border-t-slate-400 rounded-full h-8 w-8" />
+          </div>
+          <span className="ml-3 text-slate-400">Loading rules...</span>
         </div>
       </div>
     );
@@ -170,13 +173,16 @@ export const Settings: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50 mb-2">⚙️ Playbook Rules</h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <h1 className="text-3xl font-bold text-slate-100 mb-1">⚙️ Playbook Rules</h1>
+          <p className="text-sm text-slate-400">
             {isTeamLead ? 'Manage anomaly detection rules' : 'View active rules (read-only)'}
           </p>
         </div>
         {isTeamLead && (
-          <Button onClick={() => handleOpenModal()} className="gap-2">
+          <Button
+            onClick={() => handleOpenModal()}
+            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white h-10 px-4"
+          >
             <Plus className="h-4 w-4" />
             Create Rule
           </Button>
@@ -185,76 +191,126 @@ export const Settings: React.FC = () => {
 
       {/* Error message */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
-          {error}
-        </div>
+        <Card className="bg-red-500/10 border-red-900/30">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Rules List */}
       {rules.length === 0 ? (
-        <Card>
+        <Card className="bg-slate-800/30 border-slate-700/60">
           <CardContent className="py-12 text-center">
-            <p className="text-gray-600 dark:text-gray-400 mb-4">No rules defined yet</p>
+            <p className="text-slate-400 mb-4">No rules defined yet</p>
             {isTeamLead && (
-              <Button onClick={() => handleOpenModal()}>Create your first rule</Button>
+              <Button
+                onClick={() => handleOpenModal()}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                Create your first rule
+              </Button>
             )}
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {rules.map((rule) => (
-            <Card key={rule.id} className="border border-gray-200 dark:border-gray-800">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+            <Card
+              key={rule.id}
+              className="bg-slate-800/30 border-slate-700/60 hover:border-slate-600/80 transition-colors"
+            >
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
                     {/* Condition */}
-                    <div className="mb-4">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-50 mb-2">
+                    <div className="mb-3">
+                      <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide mb-2">
                         Condition
-                      </h3>
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-md p-3 font-mono text-sm text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-800 overflow-x-auto">
+                      </h4>
+                      <div className="bg-slate-900/40 rounded-md p-3 font-mono text-xs text-slate-300 border border-slate-700/40 overflow-x-auto max-h-20">
                         {JSON.stringify(rule.condition_json, null, 2)}
                       </div>
                     </div>
 
                     {/* Recommendation */}
-                    <div className="mb-4">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-50 mb-2">
+                    <div className="mb-3">
+                      <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide mb-2">
                         Recommendation
-                      </h3>
-                      <p className="text-gray-700 dark:text-gray-300">{rule.recommendation}</p>
+                      </h4>
+                      <p className="text-sm text-slate-300">{rule.recommendation}</p>
                     </div>
 
                     {/* Metadata */}
-                    <div className="text-xs text-gray-500 dark:text-gray-500">
+                    <p className="text-xs text-slate-500">
                       Created {new Date(rule.created_at).toLocaleDateString()}
-                    </div>
+                    </p>
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions (TEAM_LEAD only) */}
                   {isTeamLead && (
-                    <div className="flex gap-2 ml-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button
                         onClick={() => handleOpenModal(rule)}
-                        className="gap-1"
+                        className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium bg-slate-700/40 hover:bg-slate-700/60 text-slate-200 hover:text-slate-100 transition-colors"
                       >
-                        <Edit2 className="h-4 w-4" />
+                        <Edit2 className="h-3.5 w-3.5" />
                         Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(rule.id)}
-                        className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(rule.id)}
+                        className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 transition-colors"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                         Delete
-                      </Button>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* REVIEWER: Muted/disabled state */}
+                  {!isTeamLead && (
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button
+                        disabled
+                        className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium bg-slate-700/20 text-slate-500 opacity-50 cursor-not-allowed"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                        Edit
+                      </button>
+                      <button
+                        disabled
+                        className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium bg-slate-700/20 text-slate-500 opacity-50 cursor-not-allowed"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
                     </div>
                   )}
                 </div>
+
+                {/* Delete Confirmation (inline) */}
+                {deleteConfirm === rule.id && (
+                  <div className="mt-4 p-3 rounded-md bg-red-500/10 border border-red-900/30">
+                    <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+                      Are you sure you want to delete this rule? This action cannot be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleDelete(rule.id)}
+                        className="flex-1 px-3 py-2 text-xs font-medium rounded-md bg-red-600 hover:bg-red-700 text-white transition-colors"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(null)}
+                        className="flex-1 px-3 py-2 text-xs font-medium rounded-md bg-slate-700/40 hover:bg-slate-700/60 text-slate-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -263,72 +319,77 @@ export const Settings: React.FC = () => {
 
       {/* Create/Edit Modal Overlay */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-gray-200 dark:border-gray-800">
-              <CardTitle>
+        <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-800 border-slate-700">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-slate-700 p-5">
+              <CardTitle className="text-slate-100">
                 {editingRule ? 'Edit Rule' : 'Create New Rule'}
               </CardTitle>
               <button
                 onClick={handleCloseModal}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 disabled={isSubmitting}
+                className="text-slate-400 hover:text-slate-300 disabled:opacity-50"
               >
                 <X className="h-5 w-5" />
               </button>
             </CardHeader>
 
-            <CardContent className="p-6 space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+            <CardContent className="p-6 space-y-5">
+              <p className="text-sm text-slate-400">
                 Define the condition (JSON) and recommendation for this anomaly detection rule.
               </p>
 
               {/* Condition JSON */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 dark:text-gray-50 mb-2">
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide mb-2">
                   Condition (JSON Object)
                 </label>
                 <textarea
                   value={formData.conditionJson}
                   onChange={(e) => setFormData({ ...formData, conditionJson: e.target.value })}
                   placeholder={`{\n  "entity_type": "card",\n  "amount": { "$gt": 5000 }\n}`}
-                  className="w-full h-32 p-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full h-32 p-3 rounded-md border border-slate-700 bg-slate-900/40 text-slate-100 font-mono text-sm focus:ring-2 focus:ring-indigo-600/50 focus:border-transparent"
                 />
               </div>
 
               {/* Recommendation */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 dark:text-gray-50 mb-2">
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide mb-2">
                   Recommendation
                 </label>
                 <textarea
                   value={formData.recommendation}
                   onChange={(e) => setFormData({ ...formData, recommendation: e.target.value })}
                   placeholder="What action should be taken? E.g., 'Block and review'"
-                  className="w-full h-20 p-3 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full h-20 p-3 rounded-md border border-slate-700 bg-slate-900/40 text-slate-100 focus:ring-2 focus:ring-indigo-600/50 focus:border-transparent"
                 />
               </div>
 
               {/* Form Error */}
               {formError && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3 text-sm text-red-700 dark:text-red-400">
-                  {formError}
+                <div className="bg-red-500/10 border border-red-900/30 rounded-md p-3 text-sm text-red-600 dark:text-red-400 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span>{formError}</span>
                 </div>
               )}
             </CardContent>
 
             {/* Modal Actions */}
-            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-              <Button
-                variant="outline"
+            <div className="flex justify-end gap-3 p-5 border-t border-slate-700 bg-slate-900/40">
+              <button
                 onClick={handleCloseModal}
                 disabled={isSubmitting}
+                className="px-4 py-2 text-sm font-medium rounded-md bg-slate-700/40 hover:bg-slate-700/60 text-slate-200 hover:text-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
-              </Button>
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 {isSubmitting ? 'Saving...' : editingRule ? 'Update Rule' : 'Create Rule'}
-              </Button>
+              </button>
             </div>
           </Card>
         </div>

@@ -240,35 +240,36 @@ export const CaseDetail: React.FC = () => {
     data.baseline_mean + data.anomaly_score * data.baseline_stddev;
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-5 p-5">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-3 mb-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate('/cases')}
+              className="h-8 w-8 text-slate-300 hover:bg-slate-700/50"
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">
-              Case {data.id}
+            <h1 className="text-2xl font-semibold text-slate-100">
+              Case {data.id.slice(0, 12)}
             </h1>
           </div>
-          <div className="flex items-center gap-4 mt-4">
+          <div className="flex flex-wrap items-center gap-3 mt-3">
             <StateBadge state={data.state} />
             <Badge
               style={{ backgroundColor: SEVERITY_COLORS[data.severity] }}
-              className="text-gray-900"
+              className="text-slate-900 text-xs"
             >
               {data.severity}
             </Badge>
-            <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Created: {formatDate(data.created_at)}
-            </div>
             <SLABadge createdAt={data.created_at} />
-            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <div className="text-xs text-slate-400">
+              {formatDate(data.created_at)}
+            </div>
+            <div className={`text-xs font-semibold ${slaRemaining > 3600000 ? 'text-slate-400' : 'text-rose-400'}`}>
               {formatSLA(slaRemaining)}
             </div>
           </div>
@@ -280,7 +281,7 @@ export const CaseDetail: React.FC = () => {
             <Button
               onClick={handleAccept}
               disabled={actingOn !== null}
-              className="bg-amber-500 hover:bg-amber-600"
+              className="h-8 px-3 text-xs bg-indigo-600/70 hover:bg-indigo-600 text-white"
             >
               {actingOn === 'accept' ? 'Accepting...' : 'Accept'}
             </Button>
@@ -289,11 +290,11 @@ export const CaseDetail: React.FC = () => {
             <Button
               onClick={handleResolve}
               disabled={actingOn !== null}
-              className="bg-emerald-500 hover:bg-emerald-600"
+              className="h-8 px-3 text-xs bg-green-600/70 hover:bg-green-600 text-white"
             >
               {actingOn === 'resolve' ? 'Resolving...' : (
                 <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
+                  <CheckCircle className="mr-1 h-3 w-3" />
                   Resolve
                 </>
               )}
@@ -303,11 +304,11 @@ export const CaseDetail: React.FC = () => {
             <Button
               onClick={handleEscalate}
               disabled={actingOn !== null}
-              variant="destructive"
+              className="h-8 px-3 text-xs bg-rose-600/50 hover:bg-rose-600/70 text-white"
             >
               {actingOn === 'escalate' ? 'Escalating...' : (
                 <>
-                  <AlertTriangle className="mr-2 h-4 w-4" />
+                  <AlertTriangle className="mr-1 h-3 w-3" />
                   Escalate
                 </>
               )}
@@ -318,14 +319,14 @@ export const CaseDetail: React.FC = () => {
 
       {/* KB Link */}
       {isResolved && data.knowledge_base_entry && (
-        <Card className="border-l-4 border-l-emerald-500 bg-emerald-50 dark:bg-emerald-900/20">
-          <CardContent className="pt-6">
+        <Card className="border-l-4 border-l-green-600/50 bg-green-950/20 border-slate-700/40">
+          <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Knowledge Base Entry
+                <div className="text-xs font-semibold text-green-300 uppercase tracking-wide">
+                  Knowledge Base
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm text-slate-300 mt-1">
                   {data.knowledge_base_entry.title}
                 </div>
               </div>
@@ -333,9 +334,10 @@ export const CaseDetail: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate(`/knowledge-base/${data.knowledge_base_entry!.id}`)}
+                className="h-7 px-2 text-xs bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 border-slate-600"
               >
-                <LinkIcon className="mr-2 h-4 w-4" />
-                View Entry
+                <LinkIcon className="mr-1 h-3 w-3" />
+                View
               </Button>
             </div>
           </CardContent>
@@ -344,30 +346,30 @@ export const CaseDetail: React.FC = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="evidence">Evidence</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
-          <TabsTrigger value="audit">Audit Trail</TabsTrigger>
+        <TabsList className="bg-slate-900/40 border-b border-slate-700/40 rounded-none">
+          <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+          <TabsTrigger value="evidence" className="text-xs">Evidence</TabsTrigger>
+          <TabsTrigger value="recommendations" className="text-xs">Recommendations</TabsTrigger>
+          <TabsTrigger value="audit" className="text-xs">Audit</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Anomaly Details</CardTitle>
+        <TabsContent value="overview" className="space-y-3">
+          <Card className="bg-slate-800/30 border-slate-700/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-100">Anomaly Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/40">
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                     Entity
                   </div>
-                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">
+                  <div className="text-sm font-semibold text-slate-100 mt-1">
                     {data.entity_id}
                   </div>
                   <button
-                    className="mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                    className="mt-2 text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
                     onClick={() => {
                       navigator.clipboard.writeText(data.entity_id);
                     }}
@@ -377,98 +379,94 @@ export const CaseDetail: React.FC = () => {
                   </button>
                 </div>
 
-                <div>
-                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Anomaly Amount
+                <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/40">
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                    Amount
                   </div>
-                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">
+                  <div className="text-sm font-semibold text-slate-100 mt-1">
                     {formatCurrency(anomalyAmount)}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                    Deviation: {data.anomaly_score.toFixed(2)}σ
+                  <div className="text-xs text-slate-500 mt-1">
+                    {data.anomaly_score.toFixed(2)}σ
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/40">
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                     Baseline Mean
                   </div>
-                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">
+                  <div className="text-sm font-semibold text-slate-100 mt-1">
                     {formatCurrency(data.baseline_mean)}
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Baseline StdDev
+                <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/40">
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                    Baseline σ
                   </div>
-                  <div className="text-lg font-semibold text-gray-900 dark:text-gray-50">
+                  <div className="text-sm font-semibold text-slate-100 mt-1">
                     {formatCurrency(data.baseline_stddev)}
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                  Related Anomalies
-                </div>
-                {data.related_anomalies.length > 0 ? (
+              {data.related_anomalies.length > 0 && (
+                <div className="border-t border-slate-700/40 pt-3">
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                    Related Anomalies
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {data.related_anomalies.map((anomalyId) => (
-                      <Badge key={anomalyId} variant="outline">
-                        {anomalyId}
+                      <Badge key={anomalyId} variant="outline" className="text-xs bg-slate-900/40 border-slate-700/40 text-slate-300">
+                        {anomalyId.slice(0, 8)}
                       </Badge>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    No related anomalies
-                  </p>
-                )}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Evidence Tab */}
-        <TabsContent value="evidence" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Root Cause Links</CardTitle>
+        <TabsContent value="evidence" className="space-y-3">
+          <Card className="bg-slate-800/30 border-slate-700/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-100">Root Cause Links</CardTitle>
             </CardHeader>
             <CardContent>
               {data.evidence.root_causes.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {data.evidence.root_causes.map((link, idx) => (
                     <div
                       key={idx}
-                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                      className="border border-slate-700/40 rounded-lg p-3 bg-slate-900/20"
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-50">
+                        <div className="text-xs font-semibold text-slate-200">
                           {link.link_type}
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                          {link.transaction_id}
+                        <Badge variant="outline" className="text-xs bg-slate-900/40 border-slate-700/40 text-slate-400">
+                          {link.transaction_id.slice(0, 8)}
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-3 gap-3 text-xs">
                         <div>
-                          <div className="text-gray-600 dark:text-gray-400">Entity</div>
-                          <div className="font-medium text-gray-900 dark:text-gray-50">
+                          <div className="text-slate-500">Entity</div>
+                          <div className="font-medium text-slate-200 mt-0.5">
                             {link.transaction.entity_id}
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-600 dark:text-gray-400">Amount</div>
-                          <div className="font-medium text-gray-900 dark:text-gray-50">
+                          <div className="text-slate-500">Amount</div>
+                          <div className="font-medium text-slate-200 mt-0.5">
                             {formatCurrency(link.transaction.amount)}
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-600 dark:text-gray-400">Timestamp</div>
-                          <div className="font-medium text-gray-900 dark:text-gray-50 text-xs">
-                            {formatDate(link.transaction.timestamp)}
+                          <div className="text-slate-500">Time</div>
+                          <div className="font-medium text-slate-200 mt-0.5">
+                            {formatDate(link.transaction.timestamp).slice(0, 16)}
                           </div>
                         </div>
                       </div>
@@ -476,8 +474,8 @@ export const CaseDetail: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  No root cause links found
+                <p className="text-sm text-slate-500">
+                  No root cause links
                 </p>
               )}
             </CardContent>
@@ -485,41 +483,36 @@ export const CaseDetail: React.FC = () => {
         </TabsContent>
 
         {/* Recommendations Tab */}
-        <TabsContent value="recommendations" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Matching Playbook Rules</CardTitle>
+        <TabsContent value="recommendations" className="space-y-3">
+          <Card className="bg-slate-800/30 border-slate-700/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-100">Matching Rules</CardTitle>
             </CardHeader>
             <CardContent>
               {data.recommendations.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {data.recommendations.map((rec, idx) => (
                     <div
                       key={idx}
-                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                      className="border border-slate-700/40 rounded-lg p-3 bg-slate-900/20"
                     >
-                      <div className="flex items-start gap-3 mb-2">
-                        <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-50">
+                          <div className="text-xs font-semibold text-slate-200">
                             {rec.recommendation_text}
                           </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            Rule ID: {rec.rule_id}
+                          <div className="text-xs text-slate-500 mt-1">
+                            {rec.rule_id}
                           </div>
                         </div>
                       </div>
-                      {rec.condition && (
-                        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs font-mono text-gray-700 dark:text-gray-300 mt-2">
-                          {JSON.stringify(rec.condition, null, 2).substring(0, 100)}...
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  No recommendations found
+                <p className="text-sm text-slate-500">
+                  No recommendations
                 </p>
               )}
             </CardContent>
@@ -527,46 +520,41 @@ export const CaseDetail: React.FC = () => {
         </TabsContent>
 
         {/* Audit Trail Tab */}
-        <TabsContent value="audit" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Audit Trail (Append-Only)</CardTitle>
+        <TabsContent value="audit" className="space-y-3">
+          <Card className="bg-slate-800/30 border-slate-700/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-100">Audit Trail</CardTitle>
             </CardHeader>
             <CardContent>
               {auditLog.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {auditLog.map((entry, idx) => (
                     <div
                       key={idx}
-                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex items-start gap-4"
+                      className="border border-slate-700/40 rounded-lg p-3 bg-slate-900/20 flex items-start gap-3"
                     >
-                      <div className="flex-shrink-0 h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400 mt-2" />
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
+                      <div className="flex-shrink-0 h-1.5 w-1.5 rounded-full bg-indigo-500/70 mt-1.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="font-medium text-gray-900 dark:text-gray-50">
+                            <div className="text-xs font-semibold text-slate-200">
                               [{entry.action}]
                             </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              by {entry.actor}
+                            <div className="text-xs text-slate-500 mt-0.5">
+                              {entry.actor}
                             </div>
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-500">
-                            {formatDate(entry.created_at)}
+                          <div className="text-xs text-slate-600 whitespace-nowrap">
+                            {formatDate(entry.created_at).slice(0, 16)}
                           </div>
                         </div>
-                        {entry.changes && (
-                          <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs font-mono text-gray-700 dark:text-gray-300 mt-2">
-                            {JSON.stringify(entry.changes, null, 2).substring(0, 150)}...
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  No audit log entries
+                <p className="text-sm text-slate-500">
+                  No audit entries
                 </p>
               )}
             </CardContent>
