@@ -4,8 +4,8 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.tsx';
-import { UserRole } from '../lib/constants.ts';
+import { useAuth } from '../context/AuthContext';
+import { UserRole } from '../lib/constants';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();

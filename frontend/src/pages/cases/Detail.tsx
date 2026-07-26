@@ -25,17 +25,17 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-} from '../../components/ui/index.ts';
-import { StateBadge } from '../../components/shared/StateBadge.tsx';
-import { SLABadge } from '../../components/shared/SLABadge.tsx';
-import { apiClient } from '../../lib/api.ts';
+} from '../../components/ui/index';
+import { StateBadge } from '../../components/shared/StateBadge';
+import { SLABadge } from '../../components/shared/SLABadge';
+import { apiClient } from '../../lib/api';
 import {
   CaseState,
   CaseSeverity,
   SLA_WINDOW_MS,
   SEVERITY_COLORS,
-} from '../../lib/constants.ts';
-import { useAuth } from '../../hooks/useAuth.ts';
+} from '../../lib/constants';
+import { useAuth } from '../../hooks/useAuth';
 import {
   ChevronLeft,
   Check,
@@ -267,7 +267,7 @@ export const CaseDetail: React.FC = () => {
             <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
               Created: {formatDate(data.created_at)}
             </div>
-            <SLABadge remaining={slaRemaining} />
+            <SLABadge createdAt={data.created_at} />
             <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               {formatSLA(slaRemaining)}
             </div>

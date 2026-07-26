@@ -17,11 +17,11 @@ import {
   Input,
   Card,
   CardContent,
-} from '../../components/ui/index.ts';
-import { StateBadge } from '../../components/shared/StateBadge.tsx';
-import { SLABadge } from '../../components/shared/SLABadge.tsx';
-import { apiClient } from '../../lib/api.ts';
-import { CaseState, CaseSeverity, DEFAULT_PAGE_SIZE, SLA_WINDOW_MS } from '../../lib/constants.ts';
+} from '../../components/ui/index';
+import { StateBadge } from '../../components/shared/StateBadge';
+import { SLABadge } from '../../components/shared/SLABadge';
+import { apiClient } from '../../lib/api';
+import { CaseState, CaseSeverity, DEFAULT_PAGE_SIZE, SLA_WINDOW_MS } from '../../lib/constants';
 import { RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface CaseRow {

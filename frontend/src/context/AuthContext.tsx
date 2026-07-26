@@ -5,8 +5,8 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserRole } from '../lib/constants.ts';
-import { apiClient } from '../lib/api.ts';
+import { UserRole } from '../lib/constants';
+import { apiClient } from '../lib/api';
 
 export interface User {
   userId: string;

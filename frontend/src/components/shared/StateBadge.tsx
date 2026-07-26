@@ -4,8 +4,8 @@
  */
 
 import React from 'react';
-import { Badge } from '../ui/Badge.tsx';
-import { CaseState } from '../../lib/constants.ts';
+import { Badge } from '../ui/Badge';
+import { CaseState } from '../../lib/constants';
 
 interface StateBadgeProps {
   state: CaseState;
