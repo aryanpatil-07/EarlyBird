@@ -4,17 +4,17 @@
 
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext.tsx';
-import { Login } from './pages/Login.tsx';
-import { Dashboard } from './pages/Dashboard.tsx';
-import { CaseQueue } from './pages/cases/Queue.tsx';
-import { CaseDetail } from './pages/cases/Detail.tsx';
-import { KnowledgeBase } from './pages/KnowledgeBase.tsx';
-import { Settings } from './pages/settings/Rules.tsx';
-import { Layout } from './components/Layout.tsx';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { Login } from './pages/Login';
+import { Dashboard } from './pages/Dashboard';
+import { CaseQueue } from './pages/cases/Queue';
+import { CaseDetail } from './pages/cases/Detail';
+import { KnowledgeBase } from './pages/KnowledgeBase';
+import { Settings } from './pages/settings/Rules';
+import { Layout } from './components/Layout';
 import './App.css';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {

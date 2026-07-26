@@ -11,7 +11,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiClient } from '../../lib/api.ts';
+import { apiClient } from '../lib/api';
 import { ChevronRight, ChevronDown, Search, Loader, FileText, Calendar, Link as LinkIcon } from 'lucide-react';
 
 interface KBEntry {
@@ -60,10 +60,8 @@ export const KnowledgeBase: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.searchKB(searchQuery, {
-        page: pageNum,
-        limit: perPage,
-      });
+      const offset = (pageNum - 1) * perPage;
+      const response = await apiClient.searchKB(searchQuery, perPage, offset);
       
       const data = response as SearchResponse;
       setResults(data.entries || []);

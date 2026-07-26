@@ -7,9 +7,9 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.tsx';
+import { useAuth } from '../context/AuthContext';
 import { Menu, X, LogOut, Settings } from 'lucide-react';
-import { APP_NAME } from '../lib/constants.ts';
+import { APP_NAME } from '../lib/constants';
 
 interface LayoutProps {
   children: React.ReactNode;

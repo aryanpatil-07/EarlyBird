@@ -4,8 +4,8 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Badge } from '../ui/Badge.tsx';
-import { SLA_WINDOW_MS } from '../../lib/constants.ts';
+import { Badge } from '../ui/Badge';
+import { SLA_WINDOW_MS } from '../../lib/constants';
 
 interface SLABadgeProps {
   createdAt: string;

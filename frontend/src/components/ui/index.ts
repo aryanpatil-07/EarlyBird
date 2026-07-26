@@ -3,9 +3,9 @@
  * Central point for importing shadcn/ui components
  */
 
-export { Button, type ButtonProps, buttonVariants } from './Button.tsx';
-export { Badge, type BadgeProps, badgeVariants } from './Badge.tsx';
-export { Input, type InputProps } from './Input.tsx';
+export { Button, type ButtonProps, buttonVariants } from './Button';
+export { Badge, type BadgeProps, badgeVariants } from './Badge';
+export { Input, type InputProps } from './Input';
 export {
   Card,
   CardHeader,
@@ -13,7 +13,7 @@ export {
   CardTitle,
   CardDescription,
   CardContent,
-} from './Card.tsx';
+} from './Card';
 export {
   Table,
   TableHeader,
@@ -23,5 +23,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
-} from './Table.tsx';
-export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs.tsx';
+} from './Table';
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';
