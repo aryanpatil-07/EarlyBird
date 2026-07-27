@@ -100,35 +100,48 @@ export const KnowledgeBase: React.FC = () => {
     <div className="space-y-4 p-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-slate-100 mb-1">
+        <h1 className="text-2xl font-semibold mb-1" style={{ color: 'var(--color-foreground)' }}>
           Knowledge Base
         </h1>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
           Search resolved cases and historical patterns
         </p>
       </div>
 
       {/* Search Input */}
-      <div className="bg-slate-800/30 rounded-lg border border-slate-700/60 p-3">
+      <div className="rounded-lg border p-3" style={{
+        backgroundColor: 'var(--color-background-alt)',
+        borderColor: 'var(--color-border)'
+      }}>
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4" style={{ color: 'var(--color-text-muted)' }} />
           <input
             type="text"
             placeholder="Search by pattern, merchant, entity..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 text-sm border border-slate-700 rounded-md bg-slate-900/50 text-slate-100 placeholder-slate-500 hover:border-slate-600 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-500/50 transition-colors"
+            className="w-full pl-8 pr-3 py-2 text-sm rounded-md transition-colors border"
+            style={{
+              backgroundColor: 'var(--color-background-muted)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-foreground)'
+            }}
+            onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+            onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border)'}
           />
           {loading && (
-            <Loader className="absolute right-2.5 top-2.5 h-4 w-4 text-indigo-500 animate-spin" />
+            <Loader className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin" style={{ color: 'var(--color-primary)' }} />
           )}
         </div>
       </div>
 
       {/* Error State */}
       {error && (
-        <div className="bg-rose-950/30 border border-rose-500/40 rounded-lg p-3">
-          <p className="text-rose-300 text-xs">{error}</p>
+        <div className="rounded-lg border p-3" style={{
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          borderColor: 'rgba(239, 68, 68, 0.3)'
+        }}>
+          <p className="text-red-400 text-xs">{error}</p>
         </div>
       )}
 
@@ -136,7 +149,7 @@ export const KnowledgeBase: React.FC = () => {
       {query.trim() ? (
         <div className="space-y-3">
           {/* Results Header */}
-          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+          <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
             {loading ? (
               'Searching...'
             ) : results.length > 0 ? (
@@ -154,36 +167,42 @@ export const KnowledgeBase: React.FC = () => {
                 return (
                   <div
                     key={entry.id}
-                    className="bg-slate-800/30 rounded-lg border border-slate-700/60 overflow-hidden"
+                    className="rounded-lg border overflow-hidden"
+                    style={{
+                      backgroundColor: 'var(--color-background-alt)',
+                      borderColor: 'var(--color-border)'
+                    }}
                   >
                     {/* Entry Header (always visible) */}
                     <div
                       onClick={() => setExpandedEntryId(isExpanded ? null : entry.id)}
-                      className="p-3 cursor-pointer hover:bg-slate-700/20 transition-colors"
+                      className="p-3 cursor-pointer transition-colors"
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           {/* Title */}
                           <div className="flex items-center gap-2 mb-1">
-                            <FileText className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-                            <h3 className="font-semibold text-slate-100 truncate text-sm">
+                            <FileText className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--color-primary)' }} />
+                            <h3 className="font-semibold truncate text-sm" style={{ color: 'var(--color-foreground)' }}>
                               {entry.title}
                             </h3>
                           </div>
 
                           {/* Description Preview */}
-                          <p className="text-xs text-slate-400 mb-2 line-clamp-1">
+                          <p className="text-xs mb-2 line-clamp-1" style={{ color: 'var(--color-text-muted)' }}>
                             {entry.description}
                           </p>
 
                           {/* Meta */}
-                          <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500">
+                          <div className="flex items-center gap-2 flex-wrap text-xs" style={{ color: 'var(--color-text-muted)' }}>
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               <span>{formatDate(entry.created_at)}</span>
                             </div>
                             {entry.resolved_case_id && (
-                              <div className="flex items-center gap-1 text-indigo-400">
+                              <div className="flex items-center gap-1" style={{ color: 'var(--color-primary)' }}>
                                 <LinkIcon className="h-3 w-3" />
                                 <span>{entry.resolved_case_id.slice(0, 8)}</span>
                               </div>
@@ -193,22 +212,27 @@ export const KnowledgeBase: React.FC = () => {
 
                         {/* Expand Arrow */}
                         <ChevronDown
-                          className={`h-4 w-4 text-slate-500 flex-shrink-0 mt-0.5 transition-transform ${
-                            isExpanded ? 'transform rotate-180' : ''
-                          }`}
+                          className={`h-4 w-4 flex-shrink-0 mt-0.5 transition-transform`}
+                          style={{ 
+                            color: 'var(--color-text-muted)',
+                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                          }}
                         />
                       </div>
                     </div>
 
                     {/* Expanded Content */}
                     {isExpanded && (
-                      <div className="border-t border-slate-700/40 p-3 bg-slate-900/30 space-y-3">
+                      <div className="border-t space-y-3 p-3" style={{
+                        backgroundColor: 'var(--color-background-muted)',
+                        borderTopColor: 'var(--color-border)'
+                      }}>
                         {/* Full Description */}
                         <div>
-                          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
+                          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>
                             Details
                           </div>
-                          <p className="text-xs text-slate-300 leading-relaxed">
+                          <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                             {entry.description.substring(0, 300)}
                           </p>
                         </div>
@@ -216,14 +240,18 @@ export const KnowledgeBase: React.FC = () => {
                         {/* Tags */}
                         {entry.tags && entry.tags.length > 0 && (
                           <div>
-                            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
+                            <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>
                               Tags
                             </div>
                             <div className="flex flex-wrap gap-1">
                               {entry.tags.map((tag) => (
                                 <span
                                   key={tag}
-                                  className="inline-block px-2 py-0.5 bg-indigo-950/40 text-indigo-300 rounded text-xs"
+                                  className="inline-block px-2 py-0.5 rounded text-xs"
+                                  style={{
+                                    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                                    color: 'var(--color-accent-light)'
+                                  }}
                                 >
                                   {tag}
                                 </span>
@@ -234,12 +262,22 @@ export const KnowledgeBase: React.FC = () => {
 
                         {/* Related Case Link */}
                         {entry.resolved_case_id && (
-                          <div className="bg-green-950/20 border border-green-600/30 rounded p-2">
+                          <div className="rounded p-2" style={{
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderColor: 'rgba(16, 185, 129, 0.3)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)'
+                          }}>
                             <button
                               onClick={() => {
                                 navigate(`/cases/${entry.resolved_case_id}`);
                               }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-green-300 bg-green-600/20 rounded hover:bg-green-600/30 transition-colors"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded transition-colors"
+                              style={{
+                                color: 'var(--color-success)',
+                                backgroundColor: 'rgba(16, 185, 129, 0.2)'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.3)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.2)'}
                             >
                               <LinkIcon className="h-3 w-3" />
                               View Case
@@ -256,21 +294,31 @@ export const KnowledgeBase: React.FC = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-4 pt-3 border-t border-slate-700/40">
+            <div className="flex items-center justify-center gap-2 mt-4 pt-3 border-t" style={{ borderTopColor: 'var(--color-border)' }}>
               <button
                 onClick={() => handlePaginate(page - 1)}
                 disabled={page === 1 || loading}
-                className="px-3 py-1 text-xs font-medium text-slate-300 bg-slate-800/50 border border-slate-600 rounded hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1 text-xs font-medium rounded transition-colors border disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  backgroundColor: 'var(--color-background-alt)',
+                  borderColor: 'var(--color-border)'
+                }}
               >
                 Prev
               </button>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                 {page} / {totalPages}
               </div>
               <button
                 onClick={() => handlePaginate(page + 1)}
                 disabled={page >= totalPages || loading}
-                className="px-3 py-1 text-xs font-medium text-slate-300 bg-slate-800/50 border border-slate-600 rounded hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1 text-xs font-medium rounded transition-colors border disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  backgroundColor: 'var(--color-background-alt)',
+                  borderColor: 'var(--color-border)'
+                }}
               >
                 Next
               </button>
@@ -279,12 +327,15 @@ export const KnowledgeBase: React.FC = () => {
         </div>
       ) : (
         /* Empty State */
-        <div className="bg-slate-800/20 rounded-lg border border-dashed border-slate-700/40 py-12 text-center">
-          <FileText className="h-10 w-10 text-slate-600 mx-auto mb-2" />
-          <p className="text-slate-400 text-sm">
+        <div className="rounded-lg border-2 border-dashed py-12 text-center" style={{
+          backgroundColor: 'var(--color-background-muted)',
+          borderColor: 'var(--color-border)'
+        }}>
+          <FileText className="h-10 w-10 mx-auto mb-2" style={{ color: 'var(--color-text-muted)' }} />
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             Start typing to search
           </p>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
             Patterns, merchants, entities, rules
           </p>
         </div>

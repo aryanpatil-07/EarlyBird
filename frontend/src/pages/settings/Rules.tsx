@@ -1,20 +1,11 @@
 /**
  * Playbook Rules Settings Page
- * Rule management (TEAM_LEAD only), REVIEWER read-only
- * 
- * Features:
- * - Rule list with edit/delete (TEAM_LEAD)
- * - Create/Edit modal using Card overlay
- * - JSON validation
- * - Role-based access control
- * 
- * Dark fintech aesthetic: slate-800/30 cards, indigo-600 accents, slate-400 muted text
+ * Rule management with design system CSS variables for dark mode OLED styling
  */
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { apiClient } from '../../lib/api';
-import { Button, Card, CardContent, CardHeader, CardTitle } from '../../components/ui/index';
 import { Trash2, Edit2, Plus, X, AlertCircle } from 'lucide-react';
 
 interface PlaybookRule {
@@ -157,12 +148,22 @@ export const Settings: React.FC = () => {
   if (loading) {
     return (
       <div className="p-6 space-y-6">
-        <h1 className="text-3xl font-bold text-slate-100">⚙️ Playbook Rules</h1>
+        <h1 className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+          Playbook Rules
+        </h1>
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin">
-            <div className="border-4 border-slate-500/30 border-t-slate-400 rounded-full h-8 w-8" />
+            <div
+              className="border-4 border-t rounded-full h-8 w-8"
+              style={{
+                borderColor: 'var(--color-border)',
+                borderTopColor: 'var(--color-text-secondary)',
+              }}
+            />
           </div>
-          <span className="ml-3 text-slate-400">Loading rules...</span>
+          <span className="ml-3" style={{ color: 'var(--color-text-muted)' }}>
+            Loading rules...
+          </span>
         </div>
       </div>
     );
@@ -173,227 +174,334 @@ export const Settings: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-100 mb-1">⚙️ Playbook Rules</h1>
-          <p className="text-sm text-slate-400">
+          <h1 className="text-3xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
+            Playbook Rules
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             {isTeamLead ? 'Manage anomaly detection rules' : 'View active rules (read-only)'}
           </p>
         </div>
         {isTeamLead && (
-          <Button
+          <button
             onClick={() => handleOpenModal()}
-            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white h-10 px-4"
+            className="gap-2 text-white h-10 px-4 rounded-md font-medium transition-colors flex items-center"
+            style={{
+              backgroundColor: 'var(--color-primary)',
+            }}
           >
             <Plus className="h-4 w-4" />
             Create Rule
-          </Button>
+          </button>
         )}
       </div>
 
       {/* Error message */}
       {error && (
-        <Card className="bg-red-500/10 border-red-900/30">
-          <CardContent className="p-4 flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          </CardContent>
-        </Card>
+        <div
+          className="rounded-lg border p-4 flex items-start gap-3"
+          style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderColor: 'rgba(139, 0, 0, 0.3)',
+          }}
+        >
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-error)' }} />
+          <p className="text-sm" style={{ color: 'var(--color-error)' }}>
+            {error}
+          </p>
+        </div>
       )}
 
       {/* Rules List */}
       {rules.length === 0 ? (
-        <Card className="bg-slate-800/30 border-slate-700/60">
-          <CardContent className="py-12 text-center">
-            <p className="text-slate-400 mb-4">No rules defined yet</p>
-            {isTeamLead && (
-              <Button
-                onClick={() => handleOpenModal()}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                Create your first rule
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <div
+          className="rounded-lg border p-12 text-center"
+          style={{
+            backgroundColor: 'var(--color-background-alt)',
+            borderColor: 'var(--color-border)',
+          }}
+        >
+          <p className="mb-4" style={{ color: 'var(--color-text-muted)' }}>
+            No rules defined yet
+          </p>
+          {isTeamLead && (
+            <button
+              onClick={() => handleOpenModal()}
+              className="text-white rounded-md font-medium transition-colors px-4 py-2"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+              }}
+            >
+              Create your first rule
+            </button>
+          )}
+        </div>
       ) : (
         <div className="space-y-3">
           {rules.map((rule) => (
-            <Card
+            <div
               key={rule.id}
-              className="bg-slate-800/30 border-slate-700/60 hover:border-slate-600/80 transition-colors"
+              className="rounded-lg border p-5 transition-colors"
+              style={{
+                backgroundColor: 'var(--color-background-alt)',
+                borderColor: 'var(--color-border)',
+              }}
             >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    {/* Condition */}
-                    <div className="mb-3">
-                      <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide mb-2">
-                        Condition
-                      </h4>
-                      <div className="bg-slate-900/40 rounded-md p-3 font-mono text-xs text-slate-300 border border-slate-700/40 overflow-x-auto max-h-20">
-                        {JSON.stringify(rule.condition_json, null, 2)}
-                      </div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  {/* Condition */}
+                  <div className="mb-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                      Condition
+                    </h4>
+                    <div
+                      className="rounded-md p-3 font-mono text-xs border overflow-x-auto max-h-20"
+                      style={{
+                        backgroundColor: 'var(--color-background-muted)',
+                        borderColor: 'var(--color-border)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      {JSON.stringify(rule.condition_json, null, 2)}
                     </div>
+                  </div>
 
-                    {/* Recommendation */}
-                    <div className="mb-3">
-                      <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide mb-2">
-                        Recommendation
-                      </h4>
-                      <p className="text-sm text-slate-300">{rule.recommendation}</p>
-                    </div>
-
-                    {/* Metadata */}
-                    <p className="text-xs text-slate-500">
-                      Created {new Date(rule.created_at).toLocaleDateString()}
+                  {/* Recommendation */}
+                  <div className="mb-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                      Recommendation
+                    </h4>
+                    <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                      {rule.recommendation}
                     </p>
                   </div>
 
-                  {/* Actions (TEAM_LEAD only) */}
-                  {isTeamLead && (
-                    <div className="flex gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => handleOpenModal(rule)}
-                        className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium bg-slate-700/40 hover:bg-slate-700/60 text-slate-200 hover:text-slate-100 transition-colors"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(rule.id)}
-                        className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
-                    </div>
-                  )}
-
-                  {/* REVIEWER: Muted/disabled state */}
-                  {!isTeamLead && (
-                    <div className="flex gap-2 flex-shrink-0">
-                      <button
-                        disabled
-                        className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium bg-slate-700/20 text-slate-500 opacity-50 cursor-not-allowed"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
-                      <button
-                        disabled
-                        className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium bg-slate-700/20 text-slate-500 opacity-50 cursor-not-allowed"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
-                    </div>
-                  )}
+                  {/* Metadata */}
+                  <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    Created {new Date(rule.created_at).toLocaleDateString()}
+                  </p>
                 </div>
 
-                {/* Delete Confirmation (inline) */}
-                {deleteConfirm === rule.id && (
-                  <div className="mt-4 p-3 rounded-md bg-red-500/10 border border-red-900/30">
-                    <p className="text-sm text-red-600 dark:text-red-400 mb-3">
-                      Are you sure you want to delete this rule? This action cannot be undone.
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleDelete(rule.id)}
-                        className="flex-1 px-3 py-2 text-xs font-medium rounded-md bg-red-600 hover:bg-red-700 text-white transition-colors"
-                      >
-                        Delete
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(null)}
-                        className="flex-1 px-3 py-2 text-xs font-medium rounded-md bg-slate-700/40 hover:bg-slate-700/60 text-slate-200 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
+                {/* Actions (TEAM_LEAD only) */}
+                {isTeamLead && (
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleOpenModal(rule)}
+                      className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: 'var(--color-background-muted)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(rule.id)}
+                      className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        color: 'var(--color-error)',
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </button>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+
+                {/* REVIEWER: Muted/disabled state */}
+                {!isTeamLead && (
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      disabled
+                      className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium opacity-50 cursor-not-allowed"
+                      style={{
+                        backgroundColor: 'var(--color-background-muted)',
+                        color: 'var(--color-text-muted)',
+                      }}
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      disabled
+                      className="flex items-center gap-1.5 px-3 py-2 h-9 rounded-md text-xs font-medium opacity-50 cursor-not-allowed"
+                      style={{
+                        backgroundColor: 'var(--color-background-muted)',
+                        color: 'var(--color-text-muted)',
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Delete Confirmation (inline) */}
+              {deleteConfirm === rule.id && (
+                <div
+                  className="mt-4 p-3 rounded-md border"
+                  style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderColor: 'rgba(139, 0, 0, 0.3)',
+                  }}
+                >
+                  <p className="text-sm mb-3" style={{ color: 'var(--color-error)' }}>
+                    Are you sure you want to delete this rule? This action cannot be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleDelete(rule.id)}
+                      className="flex-1 px-3 py-2 text-xs font-medium rounded-md text-white transition-colors"
+                      style={{
+                        backgroundColor: '#DC2626',
+                      }}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(null)}
+                      className="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
+                      style={{
+                        backgroundColor: 'var(--color-background-muted)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
 
       {/* Create/Edit Modal Overlay */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-800 border-slate-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-slate-700 p-5">
-              <CardTitle className="text-slate-100">
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg border"
+            style={{
+              backgroundColor: 'var(--color-background-alt)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              className="flex flex-row items-center justify-between p-5 border-b"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {editingRule ? 'Edit Rule' : 'Create New Rule'}
-              </CardTitle>
+              </h2>
               <button
                 onClick={handleCloseModal}
                 disabled={isSubmitting}
-                className="text-slate-400 hover:text-slate-300 disabled:opacity-50"
+                className="text-sm transition-colors disabled:opacity-50"
+                style={{ color: 'var(--color-text-muted)' }}
               >
                 <X className="h-5 w-5" />
               </button>
-            </CardHeader>
+            </div>
 
-            <CardContent className="p-6 space-y-5">
-              <p className="text-sm text-slate-400">
+            {/* Modal Content */}
+            <div className="p-6 space-y-5">
+              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
                 Define the condition (JSON) and recommendation for this anomaly detection rule.
               </p>
 
               {/* Condition JSON */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                   Condition (JSON Object)
                 </label>
                 <textarea
                   value={formData.conditionJson}
                   onChange={(e) => setFormData({ ...formData, conditionJson: e.target.value })}
                   placeholder={`{\n  "entity_type": "card",\n  "amount": { "$gt": 5000 }\n}`}
-                  className="w-full h-32 p-3 rounded-md border border-slate-700 bg-slate-900/40 text-slate-100 font-mono text-sm focus:ring-2 focus:ring-indigo-600/50 focus:border-transparent"
+                  className="w-full h-32 p-3 rounded-md border font-mono text-sm focus:ring-2 focus:border-transparent transition-all"
+                  style={{
+                    backgroundColor: 'var(--color-background-muted)',
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text-primary)',
+                  }}
                 />
               </div>
 
               {/* Recommendation */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                   Recommendation
                 </label>
                 <textarea
                   value={formData.recommendation}
                   onChange={(e) => setFormData({ ...formData, recommendation: e.target.value })}
                   placeholder="What action should be taken? E.g., 'Block and review'"
-                  className="w-full h-20 p-3 rounded-md border border-slate-700 bg-slate-900/40 text-slate-100 focus:ring-2 focus:ring-indigo-600/50 focus:border-transparent"
+                  className="w-full h-20 p-3 rounded-md border focus:ring-2 focus:border-transparent transition-all"
+                  style={{
+                    backgroundColor: 'var(--color-background-muted)',
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text-primary)',
+                  }}
                 />
               </div>
 
               {/* Form Error */}
               {formError && (
-                <div className="bg-red-500/10 border border-red-900/30 rounded-md p-3 text-sm text-red-600 dark:text-red-400 flex items-start gap-2">
+                <div
+                  className="rounded-md p-3 text-sm flex items-start gap-2 border"
+                  style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderColor: 'rgba(139, 0, 0, 0.3)',
+                    color: 'var(--color-error)',
+                  }}
+                >
                   <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                   <span>{formError}</span>
                 </div>
               )}
-            </CardContent>
+            </div>
 
             {/* Modal Actions */}
-            <div className="flex justify-end gap-3 p-5 border-t border-slate-700 bg-slate-900/40">
+            <div
+              className="flex justify-end gap-3 p-5 border-t"
+              style={{
+                backgroundColor: 'var(--color-background-muted)',
+                borderColor: 'var(--color-border)',
+              }}
+            >
               <button
                 onClick={handleCloseModal}
                 disabled={isSubmitting}
-                className="px-4 py-2 text-sm font-medium rounded-md bg-slate-700/40 hover:bg-slate-700/60 text-slate-200 hover:text-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: 'var(--color-background-alt)',
+                  color: 'var(--color-text-secondary)',
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium rounded-md text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: 'var(--color-primary)',
+                }}
               >
                 {isSubmitting ? 'Saving...' : editingRule ? 'Update Rule' : 'Create Rule'}
               </button>
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>
   );
 };
+
+export default Settings;
