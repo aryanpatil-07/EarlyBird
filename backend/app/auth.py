@@ -1,13 +1,14 @@
 """Authentication utilities for EarlyBird."""
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.database import get_db
 from app.models import User
 
 
 def get_current_user(
-    authorization: str = None,
+    authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ) -> User:
     """

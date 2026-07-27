@@ -1,7 +1,7 @@
 """API endpoints for playbook rule management and recommendations."""
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api", tags=["playbooks"])
 
 
 # Helper: simple auth check
-def get_current_user(authorization: str = None, db: Session = Depends(get_db)) -> User:
+def get_current_user(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)) -> User:
     """Get current user from Authorization header."""
     if not authorization:
         raise HTTPException(

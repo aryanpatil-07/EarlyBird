@@ -103,18 +103,7 @@ def upgrade() -> None:
     )
     op.create_index('ix_root_cause_links_anomaly_id', 'root_cause_links', ['anomaly_id'])
 
-    # Create playbook_rules table (for M4)
-    op.create_table(
-        'playbook_rules',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('condition_json', sa.JSON(), nullable=False),
-        sa.Column('recommendation', sa.Text(), nullable=False),
-        sa.Column('created_by', sa.String(50), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=True),
-        sa.Column('updated_at', sa.DateTime(), nullable=True),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('ix_playbook_rules_created_at', 'playbook_rules', ['created_at'])
+    # NOTE: playbook_rules table created in migration 002
 
     # Create knowledge_base table (for M5)
     op.create_table(
@@ -151,7 +140,7 @@ def downgrade() -> None:
     # Drop tables in reverse order
     op.drop_table('audit_log')
     op.drop_table('knowledge_base')
-    op.drop_table('playbook_rules')
+    # NOTE: playbook_rules dropped in migration 002
     op.drop_table('root_cause_links')
     op.drop_table('cases')
     op.drop_table('anomalies')
