@@ -42,18 +42,20 @@ class PlaybookRuleUpdate(BaseModel):
     priority: Optional[int] = None
 
 
+from datetime import datetime
+
 class PlaybookRuleResponse(BaseModel):
     """Schema for playbook rule response."""
     id: int
     name: str
-    description: Optional[str]
+    description: Optional[str] = None
     condition_json: dict
     recommendation: str
     priority: int
     enabled: int
     created_by_id: int
-    created_at: str
-    updated_at: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True

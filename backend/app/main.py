@@ -88,6 +88,9 @@ app.add_middleware(
 from app.routers import cases_router, knowledge_base_router
 from app.routers import playbooks, dashboard, auth
 
+from app.cases.concurrency import StaleEntityException
+from app.cases.state_machine import InvalidStateTransitionException
+
 API_V1_PREFIX = "/api/v1"
 
 
@@ -111,6 +114,34 @@ async def http_exception_handler(_request: Request, exc: HTTPException):
             }
         },
         headers=getattr(exc, "headers", None),
+    )
+
+
+@app.exception_handler(StaleEntityException)
+async def stale_entity_exception_handler(_request: Request, exc: StaleEntityException):
+    return JSONResponse(
+        status_code=409,
+        content={
+            "error": {
+                "code": "STALE_CASE_STATE",
+                "message": str(exc),
+                "field": "version"
+            }
+        }
+    )
+
+
+@app.exception_handler(InvalidStateTransitionException)
+async def invalid_transition_exception_handler(_request: Request, exc: InvalidStateTransitionException):
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": {
+                "code": "INVALID_STATE_TRANSITION",
+                "message": str(exc),
+                "field": "state"
+            }
+        }
     )
 
 
