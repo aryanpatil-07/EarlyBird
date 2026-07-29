@@ -23,7 +23,7 @@ from app.models import Base, Transaction, Anomaly, Case, RootCauseLink, AuditLog
 from app.detection.service import run_detection_cycle
 from app.root_cause.service import run_correlation_cycle
 from app.cases.service import run_case_creation_cycle
-from app.dashboard.service import compute_dashboard_metrics
+from app.dashboard.service import get_dashboard_metrics
 
 
 def run_load_simulation(num_cards: int = 100, txs_per_card: int = 50):
@@ -109,10 +109,10 @@ def run_load_simulation(num_cards: int = 100, txs_per_card: int = 50):
         # Step 5: Dashboard Metrics Benchmark
         print("\n[*] Step 5: Benchmarking Dashboard Metrics Calculation...")
         start_metrics = time.perf_counter()
-        metrics = compute_dashboard_metrics(db)
+        metrics = get_dashboard_metrics(db)
         metrics_duration = (time.perf_counter() - start_metrics) * 1000.0
         print(f"[OK] Dashboard Metrics Calculated in {metrics_duration:.2f}ms")
-        print(f"     MTTD: {metrics['mttd_hours']}h | MTTR: {metrics['mttr_hours']}h | Dedup Rate: {metrics['dedup_rate_percent']}% | KB Coverage: {metrics['kb_coverage']}%")
+        print(f"     MTTD: {metrics.get('mttdSeconds')}s | MTTR: {metrics.get('mttrSeconds')}s | Dedup Rate: {metrics.get('deduplicationRate')}% | KB Coverage: {metrics.get('documentationCoverage')}%")
 
         print("\n" + "=" * 70)
         print("Performance Simulation Results Summary:")
