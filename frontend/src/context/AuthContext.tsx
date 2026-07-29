@@ -11,13 +11,14 @@ import { apiClient } from '../lib/api';
 export interface User {
   userId: string;
   role: UserRole;
+  name: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (userId: string, role: UserRole) => void;
+  login: (userId: string) => Promise<void>;
   logout: () => void;
   setTokenRefreshCallback: (callback: () => void) => void;
 }
@@ -30,36 +31,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize from localStorage
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    const userId = localStorage.getItem('userId');
-    const role = localStorage.getItem('userRole');
+    let cancelled = false;
 
-    if (token && userId && role) {
-      setUser({ userId, role: role as UserRole });
+    const restoreSession = async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
       apiClient.setToken(token);
-    }
-    setIsLoading(false);
+      try {
+        const session = await apiClient.getSession();
+        if (!cancelled) {
+          localStorage.setItem('userId', session.userId);
+          localStorage.setItem('userRole', session.role);
+          localStorage.setItem('userName', session.name);
+          setUser({
+            userId: session.userId,
+            role: session.role as UserRole,
+            name: session.name,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          apiClient.clearAuth();
+          localStorage.removeItem('userId');
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('userName');
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    restoreSession();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const login = (userId: string, role: UserRole) => {
-    // In a real app, you'd call an auth endpoint here
-    // For now, simulate with a JWT-like token
-    const token = btoa(`${userId}:${role}`);
-
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('userId', userId);
-    localStorage.setItem('userRole', role);
-
-    apiClient.setToken(token);
-    setUser({ userId, role });
+  const login = async (userId: string) => {
+    const session = await apiClient.login(userId);
+    localStorage.setItem('authToken', session.accessToken);
+    localStorage.setItem('userId', session.userId);
+    localStorage.setItem('userRole', session.role);
+    localStorage.setItem('userName', session.name);
+    apiClient.setToken(session.accessToken);
+    setUser({
+      userId: session.userId,
+      role: session.role as UserRole,
+      name: session.name,
+    });
   };
 
   const logout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
     apiClient.clearAuth();
     setUser(null);
   };

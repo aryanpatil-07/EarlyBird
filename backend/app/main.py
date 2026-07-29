@@ -6,7 +6,9 @@ Phase 1: Detection cycle with APScheduler.
 Phase 2: Correlation cycle with APScheduler.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import init_db, get_db
@@ -84,11 +86,51 @@ app.add_middleware(
 
 # Register routers
 from app.routers import cases_router, knowledge_base_router
-from app.routers import playbooks, dashboard
-app.include_router(cases_router)
-app.include_router(knowledge_base_router)
-app.include_router(playbooks.router)
-app.include_router(dashboard.router)
+from app.routers import playbooks, dashboard, auth
+
+API_V1_PREFIX = "/api/v1"
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_request: Request, exc: HTTPException):
+    """Return the documented API error envelope."""
+    code_by_status = {
+        400: "INVALID_REQUEST",
+        401: "UNAUTHORIZED",
+        403: "FORBIDDEN",
+        404: "NOT_FOUND",
+        409: "STALE_CASE_STATE",
+        422: "VALIDATION_ERROR",
+    }
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": code_by_status.get(exc.status_code, "SERVER_ERROR"),
+                "message": str(exc.detail),
+            }
+        },
+        headers=getattr(exc, "headers", None),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Request validation failed",
+                "field": exc.errors()[0].get("loc", [None])[-1] if exc.errors() else None,
+            }
+        },
+    )
+
+
+for router in (auth.router, cases_router, knowledge_base_router, playbooks.router, dashboard.router):
+    app.include_router(router, prefix=API_V1_PREFIX)
+    app.include_router(router)
 
 
 # Health check endpoint
@@ -96,6 +138,12 @@ app.include_router(dashboard.router)
 async def health_check():
     """Simple health check endpoint."""
     return {"status": "ok", "service": "EarlyBird API"}
+
+
+@app.get(f"{API_V1_PREFIX}/health", tags=["health"])
+async def api_v1_health_check():
+    """Canonical API health check endpoint."""
+    return {"status": "ok", "service": "EarlyBird API", "apiVersion": "v1"}
 
 
 # Root endpoint

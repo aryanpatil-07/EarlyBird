@@ -1,19 +1,14 @@
-"""
-Authentication router — Simple bearer token auth.
+"""Authentication router for the documented demo login flow."""
 
-Phase 0: Basic auth with user_id in Authorization header.
-No passwords, no SSO, no JWT complexity.
-
-Endpoints:
-- POST /auth/login { userId: "1" } -> { access_token, token_type }
-"""
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
+from app.auth import get_current_user, make_access_token, user_display_name
 from app.database import get_db
 from app.models import User
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -22,48 +17,47 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 class LoginRequest(BaseModel):
     """Login request body."""
-    userId: str  # User ID (matches User.user_id in database)
+
+    userId: str
 
 
-class LoginResponse(BaseModel):
-    """Login response body."""
-    access_token: str  # Bearer token (just the user_id for simplicity)
-    token_type: str = "bearer"
+class IdentityResponse(BaseModel):
+    """Authenticated identity response."""
+
+    accessToken: str
+    role: str
+    userId: str
+    name: str
+    tokenType: str = "bearer"
 
 
-@router.post("/login", response_model=LoginResponse)
-def login(
-    request: LoginRequest,
-    db: Session = Depends(get_db),
-):
-    """
-    Simple bearer token login.
-    
-    No password required. Just provide userId from seeded users:
-    - userId: "1" → REVIEWER role
-    - userId: "2" → TEAM_LEAD role
-    
-    Returns access_token to use in Authorization header: Bearer {token}
-    
-    Per 07-API-Specification.md §4: Auth Endpoints
-    """
-    logger.info(f"Login attempt: user_id={request.userId}")
-    
-    # Check if user exists
+@router.post("/login", response_model=IdentityResponse)
+def login(request: LoginRequest, db: Session = Depends(get_db)) -> IdentityResponse:
+    """Look up a seeded demo user and return a stable bearer token."""
     user = db.query(User).filter(User.user_id == request.userId).first()
-    
+
     if not user:
-        logger.warning(f"Login failed: user_id={request.userId} not found")
+        logger.warning("Login failed: user_id=%s not found", request.userId)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"User '{request.userId}' not found. Available users: '1' (REVIEWER), '2' (TEAM_LEAD)",
+            detail=f"User '{request.userId}' not found",
         )
-    
-    logger.info(f"Login successful: user_id={request.userId}, role={user.role}")
-    
-    # Return access token (simplified: just the user_id)
-    # In production, this would be a JWT or session token
-    return LoginResponse(
-        access_token=request.userId,
-        token_type="bearer",
+
+    logger.info("Login successful: user_id=%s role=%s", user.user_id, user.role)
+    return IdentityResponse(
+        accessToken=make_access_token(user),
+        role=user.role,
+        userId=user.user_id,
+        name=user_display_name(user),
+    )
+
+
+@router.get("/session", response_model=IdentityResponse)
+def session(current_user: User = Depends(get_current_user)) -> IdentityResponse:
+    """Return the identity represented by the current bearer token."""
+    return IdentityResponse(
+        accessToken=make_access_token(current_user),
+        role=current_user.role,
+        userId=current_user.user_id,
+        name=user_display_name(current_user),
     )

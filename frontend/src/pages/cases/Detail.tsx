@@ -1,31 +1,11 @@
 /**
  * Case Detail Page
  * Full investigation view — anomalies, root causes, recommendations, audit trail
- * 
- * Tabs:
- * 1. Overview — entity, amount, merchant, baseline deviation
- * 2. Evidence — linked transactions and root causes
- * 3. Recommendations — matching playbook rules
- * 4. Audit Trail — append-only log of actions
- * 
- * Actions: Accept, Resolve, Escalate (with state transitions)
- * SLA countdown, KB link (if resolved)
+ * Uses design system CSS variables for dark mode OLED styling
  */
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Badge,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from '../../components/ui/index';
 import { StateBadge } from '../../components/shared/StateBadge';
 import { SLABadge } from '../../components/shared/SLABadge';
 import { apiClient } from '../../lib/api';
@@ -99,7 +79,6 @@ interface CaseDetailData {
 export const CaseDetail: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
-  // Note: user is from context, can be used for future permission checks
   useAuth();
 
   const [data, setData] = useState<CaseDetailData | null>(null);
@@ -148,16 +127,15 @@ export const CaseDetail: React.FC = () => {
     return () => clearInterval(interval);
   }, [data]);
 
-  // Early validation after all hooks
   if (!caseId) {
-    return <div className="p-6 text-red-600">Invalid case ID</div>;
+    return <div className="p-6" style={{ color: 'var(--color-error)' }}>Invalid case ID</div>;
   }
 
   const handleAccept = async () => {
     if (!data) return;
     setActingOn('accept');
     try {
-      await apiClient.acceptCase(caseId);
+      await apiClient.acceptCase(caseId, data.version, 'Reviewer acknowledged the case');
       setData({ ...data, state: CaseState.ACCEPTED });
       await fetchCaseDetail();
     } catch (err: any) {
@@ -171,7 +149,8 @@ export const CaseDetail: React.FC = () => {
     if (!data) return;
     setActingOn('resolve');
     try {
-      await apiClient.resolveCase(caseId);
+      const rationale = window.prompt('Resolution rationale') || 'Reviewer accepted the recommended resolution';
+      await apiClient.resolveCase(caseId, data.version, rationale);
       setData({ ...data, state: CaseState.RESOLVED });
       await fetchCaseDetail();
     } catch (err: any) {
@@ -185,7 +164,8 @@ export const CaseDetail: React.FC = () => {
     if (!data) return;
     setActingOn('escalate');
     try {
-      await apiClient.escalateCase(caseId);
+      const reason = window.prompt('Escalation reason') || 'Reviewer needs Team Lead review for this case';
+      await apiClient.escalateCase(caseId, data.version, reason);
       setData({ ...data, state: CaseState.ESCALATED });
       await fetchCaseDetail();
     } catch (err: any) {
@@ -209,7 +189,7 @@ export const CaseDetail: React.FC = () => {
   if (loading) {
     return (
       <div className="p-6 text-center">
-        <div className="text-gray-600 dark:text-gray-400">Loading case detail...</div>
+        <div style={{ color: 'var(--color-text-muted)' }}>Loading case detail...</div>
       </div>
     );
   }
@@ -217,16 +197,19 @@ export const CaseDetail: React.FC = () => {
   if (error || !data) {
     return (
       <div className="p-6">
-        <div className="text-red-600 dark:text-red-400">{error || 'Case not found'}</div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-4"
+        <div style={{ color: 'var(--color-error)' }}>{error || 'Case not found'}</div>
+        <button
+          className="mt-4 h-8 px-3 text-xs rounded-md border flex items-center gap-2"
+          style={{
+            backgroundColor: 'var(--color-background-alt)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-secondary)',
+          }}
           onClick={() => navigate('/cases')}
         >
-          <ChevronLeft className="mr-2 h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" />
           Back to Queue
-        </Button>
+        </button>
       </div>
     );
   }
@@ -245,31 +228,38 @@ export const CaseDetail: React.FC = () => {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
-            <Button
-              variant="ghost"
-              size="icon"
+            <button
               onClick={() => navigate('/cases')}
-              className="h-8 w-8 text-slate-300 hover:bg-slate-700/50"
+              className="h-8 w-8 rounded-md flex items-center justify-center transition-colors"
+              style={{
+                backgroundColor: 'var(--color-background-alt)',
+                color: 'var(--color-text-secondary)',
+              }}
             >
               <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-semibold text-slate-100">
+            </button>
+            <h1 className="text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
               Case {data.id.slice(0, 12)}
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-3 mt-3">
             <StateBadge state={data.state} />
-            <Badge
+            <div
+              className="px-2 py-1 rounded text-xs font-medium text-slate-900"
               style={{ backgroundColor: SEVERITY_COLORS[data.severity] }}
-              className="text-slate-900 text-xs"
             >
               {data.severity}
-            </Badge>
+            </div>
             <SLABadge createdAt={data.created_at} />
-            <div className="text-xs text-slate-400">
+            <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               {formatDate(data.created_at)}
             </div>
-            <div className={`text-xs font-semibold ${slaRemaining > 3600000 ? 'text-slate-400' : 'text-rose-400'}`}>
+            <div
+              className="text-xs font-semibold"
+              style={{
+                color: slaRemaining > 3600000 ? 'var(--color-text-muted)' : 'var(--color-error)',
+              }}
+            >
               {formatSLA(slaRemaining)}
             </div>
           </div>
@@ -278,194 +268,293 @@ export const CaseDetail: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex gap-2">
           {isNew && (
-            <Button
+            <button
               onClick={handleAccept}
               disabled={actingOn !== null}
-              className="h-8 px-3 text-xs bg-indigo-600/70 hover:bg-indigo-600 text-white"
+              className="h-8 px-3 text-xs rounded-md font-medium transition-colors disabled:opacity-50"
+              style={{
+                backgroundColor: '#4F46E5',
+                color: 'white',
+              }}
             >
               {actingOn === 'accept' ? 'Accepting...' : 'Accept'}
-            </Button>
+            </button>
           )}
           {isAccepted && (
-            <Button
+            <button
               onClick={handleResolve}
               disabled={actingOn !== null}
-              className="h-8 px-3 text-xs bg-green-600/70 hover:bg-green-600 text-white"
+              className="h-8 px-3 text-xs rounded-md font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              style={{
+                backgroundColor: '#059669',
+                color: 'white',
+              }}
             >
               {actingOn === 'resolve' ? 'Resolving...' : (
                 <>
-                  <CheckCircle className="mr-1 h-3 w-3" />
+                  <CheckCircle className="h-3 w-3" />
                   Resolve
                 </>
               )}
-            </Button>
+            </button>
           )}
           {!isEscalated && (
-            <Button
+            <button
               onClick={handleEscalate}
               disabled={actingOn !== null}
-              className="h-8 px-3 text-xs bg-rose-600/50 hover:bg-rose-600/70 text-white"
+              className="h-8 px-3 text-xs rounded-md font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.3)',
+                color: '#EF4444',
+              }}
             >
               {actingOn === 'escalate' ? 'Escalating...' : (
                 <>
-                  <AlertTriangle className="mr-1 h-3 w-3" />
+                  <AlertTriangle className="h-3 w-3" />
                   Escalate
                 </>
               )}
-            </Button>
+            </button>
           )}
         </div>
       </div>
 
       {/* KB Link */}
       {isResolved && data.knowledge_base_entry && (
-        <Card className="border-l-4 border-l-green-600/50 bg-green-950/20 border-slate-700/40">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs font-semibold text-green-300 uppercase tracking-wide">
-                  Knowledge Base
-                </div>
-                <div className="text-sm text-slate-300 mt-1">
-                  {data.knowledge_base_entry.title}
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(`/knowledge-base/${data.knowledge_base_entry!.id}`)}
-                className="h-7 px-2 text-xs bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 border-slate-600"
-              >
-                <LinkIcon className="mr-1 h-3 w-3" />
-                View
-              </Button>
+        <div
+          className="rounded-lg border-l-4 p-4 flex items-center justify-between"
+          style={{
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderColor: 'rgba(16, 185, 129, 0.5)',
+            borderLeftColor: '#10B981',
+          }}
+        >
+          <div>
+            <div
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: '#86EFAC' }}
+            >
+              Knowledge Base
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+              {data.knowledge_base_entry.title}
+            </div>
+          </div>
+          <button
+            onClick={() => navigate(`/knowledge-base/${data.knowledge_base_entry!.id}`)}
+            className="h-7 px-2 text-xs rounded-md font-medium transition-colors flex items-center gap-1"
+            style={{
+              backgroundColor: 'var(--color-background-muted)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            <LinkIcon className="h-3 w-3" />
+            View
+          </button>
+        </div>
       )}
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-slate-900/40 border-b border-slate-700/40 rounded-none">
-          <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-          <TabsTrigger value="evidence" className="text-xs">Evidence</TabsTrigger>
-          <TabsTrigger value="recommendations" className="text-xs">Recommendations</TabsTrigger>
-          <TabsTrigger value="audit" className="text-xs">Audit</TabsTrigger>
-        </TabsList>
+      {/* Tab Navigation */}
+      <div
+        className="flex gap-0 border-b"
+        style={{ borderColor: 'var(--color-border)' }}
+      >
+        {['overview', 'evidence', 'recommendations', 'audit'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className="px-4 py-2.5 text-xs font-medium transition-colors border-b-2"
+            style={{
+              color:
+                activeTab === tab
+                  ? 'var(--color-primary)'
+                  : 'var(--color-text-muted)',
+              borderBottomColor:
+                activeTab === tab
+                  ? 'var(--color-primary)'
+                  : 'transparent',
+            }}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
 
+      {/* Tab Content */}
+      <div>
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-3">
-          <Card className="bg-slate-800/30 border-slate-700/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-100">Anomaly Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        {activeTab === 'overview' && (
+          <div className="space-y-3 mt-4">
+            <div
+              className="rounded-lg border p-4"
+              style={{
+                backgroundColor: 'var(--color-background-alt)',
+                borderColor: 'var(--color-border)',
+              }}
+            >
+              <h3 className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                Anomaly Details
+              </h3>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/40">
-                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                <div
+                  className="p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: 'var(--color-background-muted)',
+                    borderColor: 'var(--color-border)',
+                  }}
+                >
+                  <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
                     Entity
                   </div>
-                  <div className="text-sm font-semibold text-slate-100 mt-1">
+                  <div className="text-sm font-semibold mt-1" style={{ color: 'var(--color-text-primary)' }}>
                     {data.entity_id}
                   </div>
                   <button
-                    className="mt-2 text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-                    onClick={() => {
-                      navigator.clipboard.writeText(data.entity_id);
-                    }}
+                    className="mt-2 text-xs flex items-center gap-1 transition-colors"
+                    style={{ color: 'var(--color-primary)' }}
+                    onClick={() => navigator.clipboard.writeText(data.entity_id)}
                   >
                     <Copy className="h-3 w-3" />
                     Copy
                   </button>
                 </div>
 
-                <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/40">
-                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                <div
+                  className="p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: 'var(--color-background-muted)',
+                    borderColor: 'var(--color-border)',
+                  }}
+                >
+                  <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
                     Amount
                   </div>
-                  <div className="text-sm font-semibold text-slate-100 mt-1">
+                  <div className="text-sm font-semibold mt-1" style={{ color: 'var(--color-text-primary)' }}>
                     {formatCurrency(anomalyAmount)}
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">
+                  <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
                     {data.anomaly_score.toFixed(2)}σ
                   </div>
                 </div>
 
-                <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/40">
-                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                <div
+                  className="p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: 'var(--color-background-muted)',
+                    borderColor: 'var(--color-border)',
+                  }}
+                >
+                  <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
                     Baseline Mean
                   </div>
-                  <div className="text-sm font-semibold text-slate-100 mt-1">
+                  <div className="text-sm font-semibold mt-1" style={{ color: 'var(--color-text-primary)' }}>
                     {formatCurrency(data.baseline_mean)}
                   </div>
                 </div>
 
-                <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-700/40">
-                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                <div
+                  className="p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: 'var(--color-background-muted)',
+                    borderColor: 'var(--color-border)',
+                  }}
+                >
+                  <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
                     Baseline σ
                   </div>
-                  <div className="text-sm font-semibold text-slate-100 mt-1">
+                  <div className="text-sm font-semibold mt-1" style={{ color: 'var(--color-text-primary)' }}>
                     {formatCurrency(data.baseline_stddev)}
                   </div>
                 </div>
               </div>
 
               {data.related_anomalies.length > 0 && (
-                <div className="border-t border-slate-700/40 pt-3">
-                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                <div
+                  className="border-t mt-4 pt-4"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-muted)' }}>
                     Related Anomalies
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {data.related_anomalies.map((anomalyId) => (
-                      <Badge key={anomalyId} variant="outline" className="text-xs bg-slate-900/40 border-slate-700/40 text-slate-300">
+                      <div
+                        key={anomalyId}
+                        className="px-2 py-1 rounded text-xs"
+                        style={{
+                          backgroundColor: 'var(--color-background-muted)',
+                          borderColor: 'var(--color-border)',
+                          border: '1px solid',
+                          color: 'var(--color-text-secondary)',
+                        }}
+                      >
                         {anomalyId.slice(0, 8)}
-                      </Badge>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          </div>
+        )}
 
         {/* Evidence Tab */}
-        <TabsContent value="evidence" className="space-y-3">
-          <Card className="bg-slate-800/30 border-slate-700/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-100">Root Cause Links</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {activeTab === 'evidence' && (
+          <div className="space-y-3 mt-4">
+            <div
+              className="rounded-lg border p-4"
+              style={{
+                backgroundColor: 'var(--color-background-alt)',
+                borderColor: 'var(--color-border)',
+              }}
+            >
+              <h3 className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                Root Cause Links
+              </h3>
               {data.evidence.root_causes.length > 0 ? (
                 <div className="space-y-2">
                   {data.evidence.root_causes.map((link, idx) => (
                     <div
                       key={idx}
-                      className="border border-slate-700/40 rounded-lg p-3 bg-slate-900/20"
+                      className="border rounded-lg p-3"
+                      style={{
+                        backgroundColor: 'var(--color-background-muted)',
+                        borderColor: 'var(--color-border)',
+                      }}
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <div className="text-xs font-semibold text-slate-200">
+                        <div className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                           {link.link_type}
                         </div>
-                        <Badge variant="outline" className="text-xs bg-slate-900/40 border-slate-700/40 text-slate-400">
+                        <div
+                          className="px-2 py-1 rounded text-xs"
+                          style={{
+                            backgroundColor: 'var(--color-background)',
+                            borderColor: 'var(--color-border)',
+                            border: '1px solid',
+                            color: 'var(--color-text-muted)',
+                          }}
+                        >
                           {link.transaction_id.slice(0, 8)}
-                        </Badge>
+                        </div>
                       </div>
                       <div className="grid grid-cols-3 gap-3 text-xs">
                         <div>
-                          <div className="text-slate-500">Entity</div>
-                          <div className="font-medium text-slate-200 mt-0.5">
+                          <div style={{ color: 'var(--color-text-muted)' }}>Entity</div>
+                          <div className="font-medium mt-0.5" style={{ color: 'var(--color-text-primary)' }}>
                             {link.transaction.entity_id}
                           </div>
                         </div>
                         <div>
-                          <div className="text-slate-500">Amount</div>
-                          <div className="font-medium text-slate-200 mt-0.5">
+                          <div style={{ color: 'var(--color-text-muted)' }}>Amount</div>
+                          <div className="font-medium mt-0.5" style={{ color: 'var(--color-text-primary)' }}>
                             {formatCurrency(link.transaction.amount)}
                           </div>
                         </div>
                         <div>
-                          <div className="text-slate-500">Time</div>
-                          <div className="font-medium text-slate-200 mt-0.5">
+                          <div style={{ color: 'var(--color-text-muted)' }}>Time</div>
+                          <div className="font-medium mt-0.5" style={{ color: 'var(--color-text-primary)' }}>
                             {formatDate(link.transaction.timestamp).slice(0, 16)}
                           </div>
                         </div>
@@ -474,77 +563,98 @@ export const CaseDetail: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
                   No root cause links
                 </p>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          </div>
+        )}
 
         {/* Recommendations Tab */}
-        <TabsContent value="recommendations" className="space-y-3">
-          <Card className="bg-slate-800/30 border-slate-700/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-100">Matching Rules</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {activeTab === 'recommendations' && (
+          <div className="space-y-3 mt-4">
+            <div
+              className="rounded-lg border p-4"
+              style={{
+                backgroundColor: 'var(--color-background-alt)',
+                borderColor: 'var(--color-border)',
+              }}
+            >
+              <h3 className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                Matching Rules
+              </h3>
               {data.recommendations.length > 0 ? (
                 <div className="space-y-2">
                   {data.recommendations.map((rec, idx) => (
                     <div
                       key={idx}
-                      className="border border-slate-700/40 rounded-lg p-3 bg-slate-900/20"
+                      className="border rounded-lg p-3 flex items-start gap-2"
+                      style={{
+                        backgroundColor: 'var(--color-background-muted)',
+                        borderColor: 'var(--color-border)',
+                      }}
                     >
-                      <div className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <div className="text-xs font-semibold text-slate-200">
-                            {rec.recommendation_text}
-                          </div>
-                          <div className="text-xs text-slate-500 mt-1">
-                            {rec.rule_id}
-                          </div>
+                      <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-success)' }} />
+                      <div className="flex-1">
+                        <div className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {rec.recommendation_text}
+                        </div>
+                        <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                          {rec.rule_id}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
                   No recommendations
                 </p>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          </div>
+        )}
 
         {/* Audit Trail Tab */}
-        <TabsContent value="audit" className="space-y-3">
-          <Card className="bg-slate-800/30 border-slate-700/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-100">Audit Trail</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {activeTab === 'audit' && (
+          <div className="space-y-3 mt-4">
+            <div
+              className="rounded-lg border p-4"
+              style={{
+                backgroundColor: 'var(--color-background-alt)',
+                borderColor: 'var(--color-border)',
+              }}
+            >
+              <h3 className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                Audit Trail
+              </h3>
               {auditLog.length > 0 ? (
                 <div className="space-y-2">
                   {auditLog.map((entry, idx) => (
                     <div
                       key={idx}
-                      className="border border-slate-700/40 rounded-lg p-3 bg-slate-900/20 flex items-start gap-3"
+                      className="border rounded-lg p-3 flex items-start gap-3"
+                      style={{
+                        backgroundColor: 'var(--color-background-muted)',
+                        borderColor: 'var(--color-border)',
+                      }}
                     >
-                      <div className="flex-shrink-0 h-1.5 w-1.5 rounded-full bg-indigo-500/70 mt-1.5" />
+                      <div
+                        className="flex-shrink-0 h-1.5 w-1.5 rounded-full mt-1.5"
+                        style={{ backgroundColor: 'var(--color-primary)' }}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="text-xs font-semibold text-slate-200">
+                            <div className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                               [{entry.action}]
                             </div>
-                            <div className="text-xs text-slate-500 mt-0.5">
+                            <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
                               {entry.actor}
                             </div>
                           </div>
-                          <div className="text-xs text-slate-600 whitespace-nowrap">
+                          <div className="text-xs whitespace-nowrap" style={{ color: 'var(--color-text-muted)' }}>
                             {formatDate(entry.created_at).slice(0, 16)}
                           </div>
                         </div>
@@ -553,14 +663,14 @@ export const CaseDetail: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
                   No audit entries
                 </p>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
