@@ -1,442 +1,388 @@
-"""
-Case workflow API endpoints (Phase 3 — M3).
+"""Case workflow API endpoints."""
 
-Implements FR-025–032:
-- FR-025: Case queue (paginated NEW/ACCEPTED/ESCALATED)
-- FR-026: Case detail with audit trail
-- FR-027: Accept case (NEW → ACCEPTED)
-- FR-028: Resolve case (ACCEPTED/ESCALATED → RESOLVED)
-- FR-029: Escalate case (*→ESCALATED)
-- FR-031: SLA auto-escalation + manual escalation
-- FR-032: Audit log + role-based access
-
-Uses:
-- State machine for transitions (state_machine.py)
-- Optimistic concurrency (concurrency.py)
-- De-duplication stats (dedup.py)
-"""
+import logging
+from datetime import datetime, timedelta
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from datetime import datetime
-from typing import List, Optional
-from app.database import get_db
-from app.models import Case, AuditLog, User
-from app.cases.state_machine import CaseStateMachine, CaseState, InvalidStateTransitionException
-from app.cases.concurrency import check_version, StaleEntityException, increment_version
+
+from app.auth import get_current_user
+from app.cases.concurrency import StaleEntityException, check_version, increment_version
 from app.cases.dedup import calculate_dedup_stats
+from app.cases.state_machine import CaseState, CaseStateMachine, InvalidStateTransitionException
+from app.database import get_db
 from app.knowledge_base import generate_kb_entry_from_case
-from app.models import KnowledgeBase
-import logging
+from app.models import Anomaly, AuditLog, Case, KnowledgeBase, RootCauseLink, Transaction, User
+from app.playbooks.recommender import Recommender
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
-
-# Pydantic models for API requests/responses
-from pydantic import BaseModel
-
-
-class CaseDetailResponse(BaseModel):
-    """Response model for case detail."""
-    id: int
-    case_id: str
-    state: str
-    severity: str
-    priority: int
-    version: int
-    recommendations: Optional[dict] = None
-    created_at: str
-    updated_at: str
-    resolved_at: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
-    
-    @classmethod
-    def from_orm(cls, obj):
-        """Convert Case ORM object to response model, serializing datetimes to ISO format."""
-        return cls(
-            id=obj.id,
-            case_id=obj.case_id,
-            state=obj.state,
-            severity=obj.severity,
-            priority=obj.priority,
-            version=obj.version,
-            recommendations=obj.recommendations,
-            created_at=obj.created_at.isoformat() if obj.created_at else None,
-            updated_at=obj.updated_at.isoformat() if obj.updated_at else None,
-            resolved_at=obj.resolved_at.isoformat() if obj.resolved_at else None,
-        )
-
-
-class CaseListResponse(BaseModel):
-    """Response model for case list."""
-    cases: List[CaseDetailResponse]
-    total: int
-    page: int
-    limit: int
-    dedup_stats: Optional[dict] = None
+SLA_HOURS = 2
 
 
 class CaseActionRequest(BaseModel):
-    """Request model for case action (accept/resolve/escalate)."""
-    version: int  # For optimistic concurrency check
-    note: Optional[str] = None  # Optional audit note
+    version: int
+    decision: Optional[str] = None
+    rationale: Optional[str] = None
+    note: Optional[str] = None
 
 
-# Helper functions
-def get_current_user(db: Session = Depends(get_db)) -> User:
-    """
-    Placeholder: In real app, extract from JWT token.
-    For now, returns a mock reviewer user.
-    """
-    # TODO: Implement JWT token validation
-    user = db.query(User).filter(User.user_id == "system_user").first()
-    if not user:
-        # Create placeholder user
-        user = User(user_id="system_user", role="REVIEWER")
-        db.add(user)
-        db.commit()
-    return user
+class CaseEscalateRequest(BaseModel):
+    version: int
+    reason: Optional[str] = None
+    note: Optional[str] = None
 
 
-def check_role_can_escalate(user: User) -> bool:
-    """Only TEAM_LEAD can escalate cases (in production; for now, both can)."""
-    # LLD §4: Escalation is primarily TEAM_LEAD action,
-    # but for MVP, both REVIEWER and TEAM_LEAD can escalate.
-    return user.role in ("REVIEWER", "TEAM_LEAD")
+def iso(value: Optional[datetime]) -> Optional[str]:
+    return value.isoformat() + "Z" if value else None
 
 
-def check_role_can_resolve_escalated(user: User) -> bool:
-    """Only TEAM_LEAD can resolve ESCALATED cases."""
-    return user.role == "TEAM_LEAD"
+def canonical_state(state: str) -> str:
+    return "ACKNOWLEDGED" if state == CaseState.ACCEPTED.value else state
 
 
-# Endpoints
+def legacy_state(state: str) -> str:
+    return CaseState.ACCEPTED.value if state == "ACKNOWLEDGED" else state
 
-@router.get("", response_model=CaseListResponse)
-def get_cases(
-    state: Optional[str] = Query(None, description="Filter by state (NEW, ACCEPTED, ESCALATED, RESOLVED)"),
-    limit: int = Query(20, ge=1, le=100),
-    page: int = Query(1, ge=1),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Get paginated case queue.
-    
-    - Filter by state (default: NEW + ACCEPTED for reviewer queue)
-    - Ordered by severity/priority/created_at
-    - Includes de-duplication stats
-    
-    FR-025: Case queue (paginated)
-    """
-    try:
-        # Build query
-        query = db.query(Case)
-        
-        if state:
-            # Validate state
-            if state not in [s.value for s in CaseState]:
-                raise HTTPException(status_code=400, detail=f"Invalid state: {state}")
-            query = query.filter(Case.state == state)
-        else:
-            # Default: show open cases (not RESOLVED)
-            query = query.filter(
-                Case.state.in_([CaseState.NEW.value, CaseState.ACCEPTED.value, CaseState.ESCALATED.value])
+
+def case_sort_state_values(state: Optional[str]) -> Optional[list[str]]:
+    if not state:
+        return None
+    values = []
+    for raw in state.split(","):
+        value = legacy_state(raw.strip().upper())
+        if value:
+            values.append(value)
+    valid = {s.value for s in CaseState}
+    invalid = [value for value in values if value not in valid]
+    if invalid:
+        raise HTTPException(status_code=400, detail=f"Invalid state: {', '.join(invalid)}")
+    return values
+
+
+def get_case_or_404(db: Session, case_ref: str) -> Case:
+    query = db.query(Case)
+    case = None
+    if str(case_ref).isdigit():
+        case = query.filter(Case.id == int(case_ref)).first()
+    if not case:
+        case = query.filter(Case.case_id == case_ref).first()
+    if not case:
+        raise HTTPException(status_code=404, detail=f"Case {case_ref} not found")
+    return case
+
+
+def first_case_anomaly(db: Session, case: Case) -> Optional[Anomaly]:
+    if case.recommendations and isinstance(case.recommendations, dict):
+        anomaly_ids = case.recommendations.get("anomaly_ids") or []
+        if anomaly_ids:
+            return db.query(Anomaly).filter(Anomaly.id == anomaly_ids[0]).first()
+    return db.query(Anomaly).order_by(Anomaly.created_at.desc()).first()
+
+
+def anomaly_transaction(db: Session, anomaly: Optional[Anomaly]) -> Optional[Transaction]:
+    if not anomaly:
+        return None
+    return db.query(Transaction).filter(Transaction.id == anomaly.transaction_id).first()
+
+
+def build_queue_item(db: Session, case: Case) -> dict[str, Any]:
+    anomaly = first_case_anomaly(db, case)
+    tx = anomaly_transaction(db, anomaly)
+    entity_ref = tx.card_id if tx else f"CASE-{case.id}"
+    score = anomaly.score if anomaly else float(case.priority or 0)
+    deadline = case.created_at + timedelta(hours=SLA_HOURS) if case.created_at else None
+    duplicate_count = 1
+    if case.recommendations and isinstance(case.recommendations, dict):
+        duplicate_count = int(case.recommendations.get("duplicate_count", 1) or 1)
+
+    return {
+        "id": str(case.id),
+        "caseId": case.case_id,
+        "status": canonical_state(case.state),
+        "state": case.state,
+        "severity": case.severity,
+        "priority": case.priority,
+        "version": case.version,
+        "entityRef": entity_ref,
+        "entity_id": entity_ref,
+        "anomalyScore": score,
+        "anomaly_score": score,
+        "duplicateCount": duplicate_count,
+        "slaDeadline": iso(deadline),
+        "createdAt": iso(case.created_at),
+        "created_at": iso(case.created_at),
+        "updatedAt": iso(case.updated_at),
+    }
+
+
+def build_case_detail(db: Session, case: Case) -> dict[str, Any]:
+    anomaly = first_case_anomaly(db, case)
+    tx = anomaly_transaction(db, anomaly)
+    queue_item = build_queue_item(db, case)
+    links = []
+    related_ids = []
+    if anomaly:
+        for link in db.query(RootCauseLink).filter(RootCauseLink.anomaly_id == anomaly.id).all():
+            related_ids.append(str(link.related_anomaly_id))
+            related = db.query(Anomaly).filter(Anomaly.id == link.related_anomaly_id).first()
+            related_tx = anomaly_transaction(db, related)
+            links.append(
+                {
+                    "transaction_id": str(related_tx.id if related_tx else link.related_anomaly_id),
+                    "link_type": link.link_type,
+                    "explanation": (link.evidence or {}).get("explanation", link.link_type),
+                    "transaction": {
+                        "id": str(related_tx.id if related_tx else link.related_anomaly_id),
+                        "entity_id": related_tx.card_id if related_tx else queue_item["entityRef"],
+                        "merchant_id": related_tx.merchant_id if related_tx else "",
+                        "amount": related_tx.amount if related_tx else 0,
+                        "timestamp": iso(related_tx.timestamp) if related_tx else queue_item["createdAt"],
+                        "mcc": "",
+                    },
+                }
             )
-        
-        # Order by severity/priority/created_at
-        query = query.order_by(
-            Case.severity.desc(),
-            Case.priority.desc(),
-            Case.created_at.asc()
-        )
-        
-        # Pagination
-        total = query.count()
-        skip = (page - 1) * limit
-        cases = query.offset(skip).limit(limit).all()
-        
-        # Calculate dedup stats
-        all_cases_count = db.query(Case).count()
-        open_cases_count = db.query(Case).filter(
-            Case.state.in_([CaseState.NEW.value, CaseState.ACCEPTED.value, CaseState.ESCALATED.value])
-        ).count()
-        
-        dedup_stats = calculate_dedup_stats(
-            session=db,
-            total_anomalies=all_cases_count * 5,  # Rough estimate
-            total_cases=all_cases_count
-        )
-        
-        return CaseListResponse(
-            cases=[CaseDetailResponse.from_orm(c) for c in cases],
-            total=total,
-            page=page,
-            limit=limit,
-            dedup_stats=dedup_stats
-        )
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching case queue: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
 
-
-@router.get("/{case_id}", response_model=CaseDetailResponse)
-def get_case_detail(
-    case_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Get full case detail with audit trail.
-    
-    FR-026: Case detail + audit trail
-    """
+    recommendations = []
     try:
-        case = db.query(Case).filter(Case.id == case_id).first()
-        if not case:
-            raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
-        
-        return CaseDetailResponse.from_orm(case)
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching case {case_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        recommendations = [
+            {
+                "rule_id": str(item.get("rule_id")),
+                "ruleId": item.get("rule_id"),
+                "ruleName": item.get("name"),
+                "recommendation_text": item.get("recommendation"),
+                "action": item.get("recommendation"),
+                "priority": item.get("priority"),
+                "condition": {},
+            }
+            for item in Recommender.get_recommendations(case, db)
+        ]
+    except Exception as exc:
+        logger.info("Recommendation matching skipped for case %s: %s", case.id, exc)
+
+    kb = db.query(KnowledgeBase).filter(KnowledgeBase.case_id == case.case_id).first()
+    audit = db.query(AuditLog).filter(
+        AuditLog.entity_type == "case",
+        AuditLog.entity_id.in_([str(case.id), case.case_id]),
+    ).order_by(AuditLog.created_at.asc()).all()
+
+    baseline_mean = anomaly.baseline if anomaly else 0
+    score = anomaly.score if anomaly else 0
+    deviation = anomaly.deviation if anomaly else 0
+    baseline_stddev = abs(deviation / score) if score else 1
+
+    return {
+        **queue_item,
+        "baseline_mean": baseline_mean,
+        "baseline_stddev": baseline_stddev,
+        "observedValue": tx.amount if tx else baseline_mean + deviation,
+        "metric": "transaction_amount",
+        "detectedAt": iso(anomaly.created_at) if anomaly else queue_item["createdAt"],
+        "evidence": {
+            "anomaly_ids": [str(anomaly.id)] if anomaly else [],
+            "root_causes": links,
+            "reason": (anomaly.evidence or {}).get("reason") if anomaly else None,
+        },
+        "rootCause": links,
+        "related_anomalies": related_ids,
+        "recommendations": recommendations,
+        "auditHistory": [
+            {
+                "id": str(log.id),
+                "action": log.action,
+                "actor": log.actor_id,
+                "actorId": log.actor_id,
+                "changes": log.changes,
+                "created_at": iso(log.created_at),
+                "createdAt": iso(log.created_at),
+            }
+            for log in audit
+        ],
+        "knowledge_base_entry": {"id": str(kb.id), "title": kb.title} if kb else None,
+    }
 
 
-@router.post("/{case_id}/accept", response_model=CaseDetailResponse)
-def accept_case(
-    case_id: int,
-    request: CaseActionRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Accept case: NEW → ACCEPTED (reviewer opens)
-    
-    - Checks version for optimistic concurrency
-    - Validates state transition
-    - Creates audit log
-    
-    FR-027: Accept case
-    FR-028: Optimistic concurrency
-    """
-    try:
-        case = db.query(Case).filter(Case.id == case_id).first()
-        if not case:
-            raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
-        
-        # Check version for optimistic concurrency
-        try:
-            check_version(db, case_id, request.version)
-        except StaleEntityException as e:
-            raise HTTPException(status_code=409, detail=str(e))
-        
-        # Validate state transition
-        try:
-            CaseStateMachine.validate_transition(case.state, CaseState.ACCEPTED.value)
-        except InvalidStateTransitionException as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        
-        # Update case
-        old_state = case.state
-        case.state = CaseState.ACCEPTED.value
-        case.updated_at = datetime.utcnow()
-        increment_version(db, case_id)
-        db.add(case)
-        
-        # Create audit log
-        audit = AuditLog(
+def audit_case(db: Session, case: Case, action: str, user: User, changes: dict[str, Any]) -> None:
+    db.add(
+        AuditLog(
             entity_type="case",
-            entity_id=str(case_id),
-            action="accept",
-            actor_id=current_user.user_id,
-            changes={
-                "old_state": old_state,
-                "new_state": CaseState.ACCEPTED.value,
-                "note": request.note or ""
-            },
+            entity_id=str(case.id),
+            action=action,
+            actor_id=user.user_id,
+            changes=changes,
         )
-        db.add(audit)
-        db.commit()
-        
-        logger.info(f"Case {case_id} accepted by {current_user.user_id}")
-        return CaseDetailResponse.from_orm(case)
-    
-    except HTTPException:
-        db.rollback()
-        raise
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error accepting case {case_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    )
 
 
-@router.post("/{case_id}/resolve", response_model=CaseDetailResponse)
-def resolve_case(
-    case_id: int,
-    request: CaseActionRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Resolve case: ACCEPTED/ESCALATED → RESOLVED
-    
-    - Checks version for optimistic concurrency
-    - Validates state transition
-    - Creates audit log
-    - Only TEAM_LEAD can resolve ESCALATED cases
-    
-    FR-028: Resolve case (ACCEPTED/ESCALATED)
-    """
+def transition_case(
+    db: Session,
+    case: Case,
+    user: User,
+    target_state: str,
+    action: str,
+    version: int,
+    note: str = "",
+) -> Case:
     try:
-        case = db.query(Case).filter(Case.id == case_id).first()
-        if not case:
-            raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
-        
-        # Check version for optimistic concurrency
-        try:
-            check_version(db, case_id, request.version)
-        except StaleEntityException as e:
-            raise HTTPException(status_code=409, detail=str(e))
-        
-        # Role check: only TEAM_LEAD can resolve ESCALATED
-        if case.state == CaseState.ESCALATED.value:
-            if not check_role_can_resolve_escalated(current_user):
-                raise HTTPException(status_code=403, detail="Only TEAM_LEAD can resolve escalated cases")
-        
-        # Validate state transition
-        try:
-            CaseStateMachine.validate_transition(case.state, CaseState.RESOLVED.value)
-        except InvalidStateTransitionException as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        
-        # Update case
-        old_state = case.state
-        case.state = CaseState.RESOLVED.value
-        case.updated_at = datetime.utcnow()
+        check_version(db, case.id, version)
+        CaseStateMachine.validate_transition(case.state, target_state)
+    except StaleEntityException as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except InvalidStateTransitionException as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    old_state = case.state
+    case.state = target_state
+    case.updated_at = datetime.utcnow()
+    if target_state == CaseState.RESOLVED.value:
         case.resolved_at = datetime.utcnow()
-        increment_version(db, case_id)
-        db.add(case)
-        
-        # Create audit log
-        audit = AuditLog(
-            entity_type="case",
-            entity_id=str(case_id),
-            action="resolve",
-            actor_id=current_user.user_id,
-            changes={
-                "old_state": old_state,
-                "new_state": CaseState.RESOLVED.value,
-                "note": request.note or ""
-            },
-        )
-        db.add(audit)
-        
-        # Generate and insert KB entry (M5: FR-040)
-        # Must happen in same transaction: if KB write fails, resolve fails
-        try:
-            kb_entry = generate_kb_entry_from_case(case, db)
-            kb = KnowledgeBase(
-                case_id=case.case_id,
-                title=kb_entry["title"],
-                content=kb_entry["content"],
-            )
-            db.add(kb)
-        except Exception as kb_error:
-            db.rollback()
-            logger.error(f"Error generating KB entry for case {case_id}: {kb_error}")
-            raise HTTPException(status_code=500, detail=f"Failed to generate KB entry: {str(kb_error)}")
-        
-        db.commit()
-        
-        logger.info(f"Case {case_id} resolved by {current_user.user_id}")
-        return CaseDetailResponse.from_orm(case)
-    
-    except HTTPException:
-        db.rollback()
-        raise
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error resolving case {case_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    increment_version(db, case.id)
+    audit_case(
+        db,
+        case,
+        action,
+        user,
+        {"old_state": old_state, "new_state": target_state, "note": note},
+    )
+    return case
 
 
-@router.post("/{case_id}/escalate", response_model=CaseDetailResponse)
-def escalate_case(
-    case_id: int,
+@router.get("")
+def get_cases(
+    status: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    severity: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    pageSize: int = Query(20, ge=1, le=100),
+    limit: Optional[int] = Query(None, ge=1, le=100),
+    offset: Optional[int] = Query(None, ge=0),
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    """Return the documented case collection envelope."""
+    page_size = limit or pageSize
+    if offset is not None:
+        page = (offset // page_size) + 1
+
+    query = db.query(Case)
+    states = case_sort_state_values(status or state)
+    if states:
+        query = query.filter(Case.state.in_(states))
+    else:
+        query = query.filter(Case.state.in_([CaseState.NEW.value, CaseState.ACCEPTED.value, CaseState.ESCALATED.value]))
+    if severity:
+        query = query.filter(Case.severity == severity.upper())
+
+    total = query.count()
+    rows = query.order_by(Case.priority.asc(), Case.created_at.asc()).offset((page - 1) * page_size).limit(page_size).all()
+    items = [build_queue_item(db, case) for case in rows]
+    dedup_stats = calculate_dedup_stats(db, db.query(Anomaly).count(), db.query(Case).count())
+
+    return {
+        "items": items,
+        "cases": items,
+        "page": page,
+        "pageSize": page_size,
+        "limit": page_size,
+        "total": total,
+        "dedupStats": dedup_stats,
+        "dedup_stats": dedup_stats,
+    }
+
+
+@router.get("/{case_id}")
+def get_case_detail(
+    case_id: str,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    """Return the case-detail read model used by the investigation screen."""
+    return build_case_detail(db, get_case_or_404(db, case_id))
+
+
+@router.post("/{case_id}/action")
+def act_on_case(
+    case_id: str,
     request: CaseActionRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Escalate case: NEW/ACCEPTED/ESCALATED → ESCALATED
-    
-    - Checks version for optimistic concurrency
-    - Validates state transition
-    - Creates audit log
-    - Role check: REVIEWER or TEAM_LEAD
-    
-    FR-029: Escalate case
-    """
+    """Apply a reviewer decision and resolve the case."""
+    decision = (request.decision or "ACCEPTED").upper()
+    if decision not in {"ACCEPTED", "REJECTED", "MODIFIED"}:
+        raise HTTPException(status_code=400, detail="decision must be ACCEPTED, REJECTED, or MODIFIED")
+    if decision in {"REJECTED", "MODIFIED"} and not (request.rationale or request.note):
+        raise HTTPException(status_code=400, detail="rationale is required for REJECTED or MODIFIED decisions")
+
+    case = get_case_or_404(db, case_id)
+    if case.state == CaseState.ESCALATED.value and current_user.role != "TEAM_LEAD":
+        raise HTTPException(status_code=403, detail="Only Team Lead can resolve escalated cases")
+
     try:
-        case = db.query(Case).filter(Case.id == case_id).first()
-        if not case:
-            raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
-        
-        # Role check
-        if not check_role_can_escalate(current_user):
-            raise HTTPException(status_code=403, detail="Only REVIEWER or TEAM_LEAD can escalate cases")
-        
-        # Check version for optimistic concurrency
-        try:
-            check_version(db, case_id, request.version)
-        except StaleEntityException as e:
-            raise HTTPException(status_code=409, detail=str(e))
-        
-        # Validate state transition
-        try:
-            CaseStateMachine.validate_transition(case.state, CaseState.ESCALATED.value)
-        except InvalidStateTransitionException as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        
-        # Update case
-        old_state = case.state
-        case.state = CaseState.ESCALATED.value
-        case.updated_at = datetime.utcnow()
-        increment_version(db, case_id)
-        db.add(case)
-        
-        # Create audit log
-        audit = AuditLog(
-            entity_type="case",
-            entity_id=str(case_id),
-            action="escalate",
-            actor_id=current_user.user_id,
-            changes={
-                "old_state": old_state,
-                "new_state": CaseState.ESCALATED.value,
-                "note": request.note or ""
-            },
-        )
-        db.add(audit)
+        target = CaseState.RESOLVED.value if case.state != CaseState.NEW.value else CaseState.ACCEPTED.value
+        if target == CaseState.ACCEPTED.value:
+            transition_case(db, case, current_user, target, "CASE_ACKNOWLEDGED", request.version, request.rationale or request.note or "")
+            transition_case(db, case, current_user, CaseState.RESOLVED.value, f"CASE_{decision}", case.version, request.rationale or request.note or "")
+        else:
+            transition_case(db, case, current_user, CaseState.RESOLVED.value, f"CASE_{decision}", request.version, request.rationale or request.note or "")
+        kb_entry = generate_kb_entry_from_case(case, db)
+        if not db.query(KnowledgeBase).filter(KnowledgeBase.case_id == case.case_id).first():
+            db.add(KnowledgeBase(case_id=case.case_id, title=kb_entry["title"], content=kb_entry["content"]))
         db.commit()
-        
-        logger.info(f"Case {case_id} escalated by {current_user.user_id}")
-        return CaseDetailResponse.from_orm(case)
-    
+        db.refresh(case)
+        return build_case_detail(db, case)
     except HTTPException:
         db.rollback()
         raise
-    except Exception as e:
+    except Exception as exc:
         db.rollback()
-        logger.error(f"Error escalating case {case_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error("Case action failed for %s: %s", case_id, exc)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.post("/{case_id}/escalate")
+def escalate_case(
+    case_id: str,
+    request: CaseEscalateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Escalate a case with a reviewer-provided reason."""
+    reason = request.reason or request.note or ""
+    if len(reason.strip()) < 10:
+        raise HTTPException(status_code=400, detail="Escalation reason must be at least 10 characters")
+    case = get_case_or_404(db, case_id)
+    try:
+        transition_case(db, case, current_user, CaseState.ESCALATED.value, "CASE_ESCALATED", request.version, reason)
+        db.commit()
+        db.refresh(case)
+        return build_case_detail(db, case)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.error("Case escalation failed for %s: %s", case_id, exc)
+        raise HTTPException(status_code=500, detail="Internal server error") from exc
+
+
+@router.post("/{case_id}/accept")
+def accept_case(case_id: str, request: CaseActionRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    case = get_case_or_404(db, case_id)
+    try:
+        transition_case(db, case, current_user, CaseState.ACCEPTED.value, "CASE_ACKNOWLEDGED", request.version, request.note or "")
+        db.commit()
+        db.refresh(case)
+        return build_case_detail(db, case)
+    except HTTPException:
+        db.rollback()
+        raise
+
+
+@router.post("/{case_id}/resolve")
+def resolve_case(case_id: str, request: CaseActionRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return act_on_case(case_id, CaseActionRequest(version=request.version, decision="ACCEPTED", rationale=request.note), db, current_user)

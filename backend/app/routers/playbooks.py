@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from app.database import get_db
+from app.auth import get_current_user, require_team_lead
 from app.models import User, Case
 from app.playbooks.rules import (
     PlaybookRule,
@@ -18,35 +19,7 @@ from app.playbooks.rules import (
 from app.playbooks.recommender import Recommender
 
 
-router = APIRouter(prefix="/api", tags=["playbooks"])
-
-
-# Helper: simple auth check
-def get_current_user(authorization: str = None, db: Session = Depends(get_db)) -> User:
-    """Get current user from Authorization header."""
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing Authorization header",
-        )
-    
-    try:
-        scheme, token = authorization.split()
-        if scheme.lower() != "bearer":
-            raise ValueError("Invalid auth scheme")
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Authorization header format",
-        )
-    
-    user = db.query(User).filter(User.user_id == token).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-        )
-    return user
+router = APIRouter(tags=["playbooks"])
 
 
 # Pydantic schemas
@@ -84,6 +57,22 @@ class PlaybookRuleResponse(BaseModel):
     
     class Config:
         from_attributes = True
+    
+    @classmethod
+    def from_orm(cls, obj):
+        """Convert ORM object to response, serializing datetimes."""
+        return cls(
+            id=obj.id,
+            name=obj.name,
+            description=obj.description,
+            condition_json=obj.condition_json,
+            recommendation=obj.recommendation,
+            priority=obj.priority,
+            enabled=obj.enabled,
+            created_by_id=obj.created_by_id,
+            created_at=obj.created_at.isoformat() if obj.created_at else None,
+            updated_at=obj.updated_at.isoformat() if obj.updated_at else None,
+        )
 
 
 class RecommendationResponse(BaseModel):
@@ -92,23 +81,6 @@ class RecommendationResponse(BaseModel):
     name: str
     recommendation: str
     priority: int
-
-
-# Helpers
-
-def require_team_lead(current_user: User = Depends(get_current_user)) -> User:
-    """
-    Dependency to enforce TEAM_LEAD role for write operations.
-    
-    Raises:
-        HTTPException 403 if user is not TEAM_LEAD
-    """
-    if current_user.role != "TEAM_LEAD":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Team Lead can manage playbook rules",
-        )
-    return current_user
 
 
 # Endpoints
@@ -192,7 +164,7 @@ def get_playbook_rule(
     return rule
 
 
-@router.put("/playbook-rules/{rule_id}", response_model=PlaybookRuleResponse)
+@router.patch("/playbook-rules/{rule_id}", response_model=PlaybookRuleResponse)
 def update_playbook_rule(
     rule_id: int,
     rule_data: PlaybookRuleUpdate,
@@ -233,6 +205,16 @@ def update_playbook_rule(
     return rule
 
 
+@router.put("/playbook-rules/{rule_id}", response_model=PlaybookRuleResponse)
+def update_playbook_rule_legacy(
+    rule_id: int,
+    rule_data: PlaybookRuleUpdate,
+    current_user: User = Depends(require_team_lead),
+    db: Session = Depends(get_db),
+) -> PlaybookRule:
+    return update_playbook_rule(rule_id, rule_data, current_user, db)
+
+
 @router.delete("/playbook-rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_playbook_rule(
     rule_id: int,
@@ -256,6 +238,21 @@ def delete_playbook_rule(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Playbook rule {rule_id} not found",
         )
+
+
+@router.patch("/playbook-rules/{rule_id}/deactivate", response_model=PlaybookRuleResponse)
+def deactivate_playbook_rule(
+    rule_id: int,
+    current_user: User = Depends(require_team_lead),
+    db: Session = Depends(get_db),
+) -> PlaybookRule:
+    rule = disable_rule(db, rule_id)
+    if not rule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Playbook rule {rule_id} not found",
+        )
+    return rule
 
 
 @router.get("/cases/{case_id}/recommendations", response_model=List[RecommendationResponse])
