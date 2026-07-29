@@ -89,6 +89,15 @@ export const CaseDetail: React.FC = () => {
   const [actingOn, setActingOn] = useState<string | null>(null);
   const [slaRemaining, setSlaRemaining] = useState<number>(0);
 
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [isEscalateModalOpen, setIsEscalateModalOpen] = useState(false);
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
+
+  const [decision, setDecision] = useState<'ACCEPTED' | 'REJECTED' | 'MODIFIED'>('ACCEPTED');
+  const [rationale, setRationale] = useState('');
+  const [escalateReason, setEscalateReason] = useState('');
+  const [modalError, setModalError] = useState<string | null>(null);
+
   const fetchCaseDetail = async () => {
     if (!caseId) return;
     
@@ -98,8 +107,8 @@ export const CaseDetail: React.FC = () => {
       const caseData = await apiClient.getCaseDetail(caseId);
       setData(caseData);
 
-      const auditData = await apiClient.getAuditLog('case', caseId);
-      setAuditLog(auditData.entries || []);
+      const auditData = await apiClient.getAuditLog({ entity_type: 'case', entity_id: caseId });
+      setAuditLog(auditData.entries || auditData.items || []);
     } catch (err: any) {
       setError(err.message || 'Failed to load case detail');
     } finally {
@@ -131,45 +140,51 @@ export const CaseDetail: React.FC = () => {
     return <div className="p-6" style={{ color: 'var(--color-error)' }}>Invalid case ID</div>;
   }
 
-  const handleAccept = async () => {
+  const handleActionSubmit = async () => {
     if (!data) return;
-    setActingOn('accept');
+    setModalError(null);
+    if ((decision === 'REJECTED' || decision === 'MODIFIED') && !rationale.trim()) {
+      setModalError(`Rationale is required for ${decision} decision`);
+      return;
+    }
+    setActingOn('action');
     try {
-      await apiClient.acceptCase(caseId, data.version, 'Reviewer acknowledged the case');
-      setData({ ...data, state: CaseState.ACCEPTED });
+      await apiClient.actOnCase(caseId, data.version, decision, rationale);
+      setIsActionModalOpen(false);
+      setRationale('');
       await fetchCaseDetail();
     } catch (err: any) {
-      alert(`Accept failed: ${err.message}`);
+      if (err.status === 409 || err.code === 'STALE_CASE_STATE') {
+        setIsActionModalOpen(false);
+        setIsConflictModalOpen(true);
+      } else {
+        setModalError(err.message || 'Action failed');
+      }
     } finally {
       setActingOn(null);
     }
   };
 
-  const handleResolve = async () => {
+  const handleEscalateSubmit = async () => {
     if (!data) return;
-    setActingOn('resolve');
-    try {
-      const rationale = window.prompt('Resolution rationale') || 'Reviewer accepted the recommended resolution';
-      await apiClient.resolveCase(caseId, data.version, rationale);
-      setData({ ...data, state: CaseState.RESOLVED });
-      await fetchCaseDetail();
-    } catch (err: any) {
-      alert(`Resolve failed: ${err.message}`);
-    } finally {
-      setActingOn(null);
+    setModalError(null);
+    if (escalateReason.trim().length < 10) {
+      setModalError('Escalation reason must be at least 10 characters');
+      return;
     }
-  };
-
-  const handleEscalate = async () => {
-    if (!data) return;
     setActingOn('escalate');
     try {
-      const reason = window.prompt('Escalation reason') || 'Reviewer needs Team Lead review for this case';
-      await apiClient.escalateCase(caseId, data.version, reason);
-      setData({ ...data, state: CaseState.ESCALATED });
+      await apiClient.escalateCase(caseId, data.version, escalateReason);
+      setIsEscalateModalOpen(false);
+      setEscalateReason('');
       await fetchCaseDetail();
     } catch (err: any) {
-      alert(`Escalate failed: ${err.message}`);
+      if (err.status === 409 || err.code === 'STALE_CASE_STATE') {
+        setIsEscalateModalOpen(false);
+        setIsConflictModalOpen(true);
+      } else {
+        setModalError(err.message || 'Escalation failed');
+      }
     } finally {
       setActingOn(null);
     }
@@ -267,53 +282,34 @@ export const CaseDetail: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex gap-2">
-          {isNew && (
+          {!isResolved && (
             <button
-              onClick={handleAccept}
+              onClick={() => { setModalError(null); setIsActionModalOpen(true); }}
               disabled={actingOn !== null}
-              className="h-8 px-3 text-xs rounded-md font-medium transition-colors disabled:opacity-50"
-              style={{
-                backgroundColor: '#4F46E5',
-                color: 'white',
-              }}
-            >
-              {actingOn === 'accept' ? 'Accepting...' : 'Accept'}
-            </button>
-          )}
-          {isAccepted && (
-            <button
-              onClick={handleResolve}
-              disabled={actingOn !== null}
-              className="h-8 px-3 text-xs rounded-md font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              className="h-8 px-3 text-xs rounded-md font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               style={{
                 backgroundColor: '#059669',
                 color: 'white',
               }}
             >
-              {actingOn === 'resolve' ? 'Resolving...' : (
-                <>
-                  <CheckCircle className="h-3 w-3" />
-                  Resolve
-                </>
-              )}
+              <CheckCircle className="h-3.5 w-3.5" />
+              Take Decision
             </button>
           )}
-          {!isEscalated && (
+          {!isEscalated && !isResolved && (
             <button
-              onClick={handleEscalate}
+              onClick={() => { setModalError(null); setIsEscalateModalOpen(true); }}
               disabled={actingOn !== null}
-              className="h-8 px-3 text-xs rounded-md font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              className="h-8 px-3 text-xs rounded-md font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.3)',
+                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                borderColor: 'rgba(239, 68, 68, 0.5)',
+                border: '1px solid',
                 color: '#EF4444',
               }}
             >
-              {actingOn === 'escalate' ? 'Escalating...' : (
-                <>
-                  <AlertTriangle className="h-3 w-3" />
-                  Escalate
-                </>
-              )}
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Escalate
             </button>
           )}
         </div>
@@ -671,6 +667,152 @@ export const CaseDetail: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Action Decision Modal */}
+      {isActionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            className="w-full max-w-md rounded-xl border p-5 shadow-2xl space-y-4"
+            style={{
+              backgroundColor: 'var(--color-background-alt)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-primary)',
+            }}
+          >
+            <h3 className="text-lg font-semibold">Reviewer Decision</h3>
+            {modalError && (
+              <div className="p-3 rounded text-xs" style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>
+                {modalError}
+              </div>
+            )}
+            <div>
+              <label className="text-xs font-medium text-slate-400 block mb-2">Select Decision</label>
+              <div className="flex gap-2">
+                {(['ACCEPTED', 'REJECTED', 'MODIFIED'] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setDecision(opt)}
+                    className={`flex-1 py-2 text-xs rounded-lg font-medium border transition-all ${
+                      decision === opt ? 'border-indigo-500 bg-indigo-600/20 text-indigo-300' : 'border-slate-700 bg-slate-800/40 text-slate-400'
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-400 block mb-1">
+                Rationale {decision !== 'ACCEPTED' && <span className="text-rose-400">*</span>}
+              </label>
+              <textarea
+                value={rationale}
+                onChange={(e) => setRationale(e.target.value)}
+                placeholder={decision === 'ACCEPTED' ? 'Optional rationale...' : 'Required decision rationale...'}
+                className="w-full h-24 p-2.5 text-xs rounded-lg border bg-slate-900/60 border-slate-700 text-slate-200 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setIsActionModalOpen(false)}
+                className="px-3 py-1.5 text-xs rounded-lg font-medium text-slate-400 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleActionSubmit}
+                disabled={actingOn !== null}
+                className="px-4 py-1.5 text-xs rounded-lg font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+              >
+                {actingOn ? 'Submitting...' : 'Submit Decision'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Escalation Modal */}
+      {isEscalateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            className="w-full max-w-md rounded-xl border p-5 shadow-2xl space-y-4"
+            style={{
+              backgroundColor: 'var(--color-background-alt)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-primary)',
+            }}
+          >
+            <h3 className="text-lg font-semibold text-rose-400 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Escalate Case
+            </h3>
+            {modalError && (
+              <div className="p-3 rounded text-xs" style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>
+                {modalError}
+              </div>
+            )}
+            <div>
+              <label className="text-xs font-medium text-slate-400 block mb-1">
+                Escalation Reason <span className="text-rose-400">*</span> (min 10 chars)
+              </label>
+              <textarea
+                value={escalateReason}
+                onChange={(e) => setEscalateReason(e.target.value)}
+                placeholder="Detail why this case requires Team Lead escalation..."
+                className="w-full h-28 p-2.5 text-xs rounded-lg border bg-slate-900/60 border-slate-700 text-slate-200 focus:outline-none focus:border-rose-500"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setIsEscalateModalOpen(false)}
+                className="px-3 py-1.5 text-xs rounded-lg font-medium text-slate-400 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEscalateSubmit}
+                disabled={actingOn !== null}
+                className="px-4 py-1.5 text-xs rounded-lg font-medium bg-rose-600 hover:bg-rose-500 text-white transition-colors"
+              >
+                {actingOn ? 'Escalating...' : 'Confirm Escalation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 409 Stale Concurrency Conflict Modal */}
+      {isConflictModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div
+            className="w-full max-w-md rounded-xl border border-amber-500/50 p-6 shadow-2xl space-y-4 text-center"
+            style={{
+              backgroundColor: 'var(--color-background-alt)',
+              color: 'var(--color-text-primary)',
+            }}
+          >
+            <div className="mx-auto h-12 w-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-bold text-amber-300">Case Version Stale (HTTP 409)</h3>
+            <p className="text-xs text-slate-300">
+              Another reviewer or background process modified this case state while you were viewing it.
+            </p>
+            <div className="pt-3">
+              <button
+                onClick={async () => {
+                  setIsConflictModalOpen(false);
+                  await fetchCaseDetail();
+                }}
+                className="w-full py-2 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors"
+              >
+                Refresh Case State
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
