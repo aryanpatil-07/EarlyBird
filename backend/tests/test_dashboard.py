@@ -26,6 +26,9 @@ class TestPrecisionMetric:
     
     def test_precision_all_true_positives(self, db: Session):
         """All flagged anomalies are fraud → precision = 1.0"""
+        db.query(Anomaly).delete()
+        db.query(Transaction).delete()
+        db.commit()
         # Create 2 fraudulent transactions
         tx1 = Transaction(
             transaction_id="TX-001",
