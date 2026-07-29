@@ -12,7 +12,9 @@ from app.models import User
 
 
 def user_display_name(user: User) -> str:
-    """Return a stable display name without requiring a schema migration."""
+    """Return a stable display name."""
+    if getattr(user, "name", None):
+        return user.name
     if user.user_id in {"1", "reviewer_1", "test_reviewer"}:
         return "Reviewer"
     if user.user_id in {"2", "team_lead_1", "team_lead"}:
@@ -33,17 +35,6 @@ def get_current_user(
     Get current user from Authorization header.
     
     Simple auth: Bearer {user_id}
-    
-    Args:
-        authorization: Authorization header value
-        db: Database session
-    
-    Returns:
-        User instance
-    
-    Raises:
-        HTTPException 401 if not authenticated or user not found
-        HTTPException 403 if unauthorized
     """
     if not authorization:
         raise HTTPException(
@@ -67,6 +58,12 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
+        )
+    
+    if hasattr(user, "is_active") and not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is deactivated",
         )
     
     return user
