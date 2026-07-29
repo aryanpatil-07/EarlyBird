@@ -2,8 +2,9 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:13-alpine
+    image: postgres:15-alpine
     container_name: earlybird-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: earlybird
       POSTGRES_PASSWORD: earlybird_dev
@@ -13,7 +14,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U earlybird"]
+      test: ["CMD-SHELL", "pg_isready -U earlybird -d earlybird_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,20 +23,23 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: ./
+      dockerfile: backend/Dockerfile
     container_name: earlybird-backend
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://earlybird:earlybird_dev@postgres:5432/earlybird_db
-      PYTHONUNBUFFERED: 1
+      PYTHONUNBUFFERED: "1"
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     networks:
       - earlybird-network
 
@@ -44,21 +48,24 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: earlybird-frontend
+    restart: unless-stopped
     ports:
-      - "3000:3000"
-    environment:
-      REACT_APP_API_URL: http://localhost:8000
+      - "80:80"
     depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/nginx_health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     networks:
       - earlybird-network
-
-volumes:
-  postgres_data:
 
 networks:
   earlybird-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
