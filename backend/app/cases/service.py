@@ -171,3 +171,28 @@ def transition_case_state(
     db.commit()
     db.refresh(case)
     return case
+
+
+def run_case_creation_cycle(db: Session) -> dict:
+    """Run case creation and deduplication cycle across unlinked anomalies."""
+    unlinked_anomalies = (
+        db.query(Anomaly)
+        .filter(~Anomaly.id.in_(db.query(Case.anomaly_id).filter(Case.anomaly_id.isnot(None))))
+        .all()
+    )
+    created_count = 0
+    merged_count = 0
+    for anomaly in unlinked_anomalies:
+        entity_id = anomaly.entity_id or f"entity_{anomaly.id}"
+        case = create_or_dedup_case(
+            db,
+            anomaly_id=anomaly.id,
+            entity_id=entity_id,
+            severity=anomaly.severity or "HIGH",
+            metric=anomaly.metric or "amount"
+        )
+        if case.duplicate_count > 0:
+            merged_count += 1
+        else:
+            created_count += 1
+    return {"unlinked_anomalies": len(unlinked_anomalies), "created_count": created_count, "merged_count": merged_count}

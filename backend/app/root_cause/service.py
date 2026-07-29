@@ -83,3 +83,16 @@ def correlate_root_causes(
 
     db.commit()
     return created_links
+
+
+def run_correlation_cycle(db: Session) -> dict:
+    """Run correlation cycle across all anomalies."""
+    anomalies = db.query(Anomaly).all()
+    links_created = 0
+    for anomaly in anomalies:
+        tx = db.query(Transaction).filter(Transaction.id == anomaly.transaction_id).first()
+        card_id = tx.card_id if tx else (anomaly.entity_id or "unknown")
+        anomaly_time = tx.timestamp if tx else anomaly.created_at
+        created = correlate_root_causes(db, anomaly.id, card_id, anomaly_time)
+        links_created += len(created)
+    return {"anomalies_evaluated": len(anomalies), "links_created": links_created}

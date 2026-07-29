@@ -33,17 +33,11 @@ def generate_kb_entry_from_case(case: Case, db: Session) -> Dict[str, str]:
     if case.state != "RESOLVED":
         raise ValueError(f"Cannot generate KB entry for case in {case.state} state. Case must be RESOLVED.")
     
-    # Query anomalies for this case
-    anomalies = db.query(Anomaly).filter(
-        Anomaly.id.in_(
-            db.query(Anomaly.id).filter(Anomaly.transaction_id.in_(
-                db.query(Transaction.id).filter(
-                    # This is a simplified query; in production, you'd have explicit case_anomalies junction table
-                    # For now, we'll fetch the case detail to get anomalies
-                ).all()
-            )).all()
-        )
-    ).all()
+    # Query anomalies for this case safely
+    if case.anomaly_id:
+        anomalies = db.query(Anomaly).filter(Anomaly.id == case.anomaly_id).all()
+    else:
+        anomalies = []
     
     # Simplified approach: fetch case detail endpoint response to get anomalies
     # In production, would need explicit case_anomalies junction table
