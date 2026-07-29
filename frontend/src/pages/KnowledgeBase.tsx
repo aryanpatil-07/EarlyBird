@@ -44,14 +44,8 @@ export const KnowledgeBase: React.FC = () => {
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query.trim()) {
-        performSearch(query, 1);
-      } else {
-        setResults([]);
-        setTotal(0);
-        setPage(1);
-      }
-    }, 500); // 500ms debounce
+      performSearch(query, 1);
+    }, 300); // 300ms debounce
 
     return () => clearTimeout(timer);
   }, [query]);
@@ -63,10 +57,10 @@ export const KnowledgeBase: React.FC = () => {
       const offset = (pageNum - 1) * perPage;
       const response = await apiClient.searchKB(searchQuery, perPage, offset);
       
-      const data = response as SearchResponse;
-      setResults(data.entries || []);
-      setTotal(data.total || 0);
-      setPage(data.page || pageNum);
+      const itemsList = response.items || response.entries || [];
+      setResults(itemsList);
+      setTotal(response.total || itemsList.length);
+      setPage(response.page || pageNum);
     } catch (err: any) {
       setError(err.message || 'Failed to search knowledge base');
       setResults([]);

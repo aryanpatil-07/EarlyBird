@@ -29,7 +29,7 @@ export const Settings: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<PlaybookRule | null>(null);
-  const [formData, setFormData] = useState({ conditionJson: '', recommendation: '' });
+  const [formData, setFormData] = useState({ name: '', conditionJson: '', recommendation: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -43,7 +43,7 @@ export const Settings: React.FC = () => {
       setError(null);
       try {
         const data = await apiClient.getPlaybookRules();
-        setRules(Array.isArray(data) ? data : data.rules || []);
+        setRules(Array.isArray(data) ? data : data.rules || data.items || []);
       } catch (err: any) {
         setError(err.message || 'Failed to load rules');
       } finally {
@@ -59,12 +59,13 @@ export const Settings: React.FC = () => {
     if (rule) {
       setEditingRule(rule);
       setFormData({
+        name: (rule as any).name || 'Rule ' + rule.id,
         conditionJson: JSON.stringify(rule.condition_json, null, 2),
         recommendation: rule.recommendation,
       });
     } else {
       setEditingRule(null);
-      setFormData({ conditionJson: '', recommendation: '' });
+      setFormData({ name: '', conditionJson: '{\n  "amount_min": 1000\n}', recommendation: '' });
     }
     setFormError(null);
     setIsModalOpen(true);
@@ -74,7 +75,7 @@ export const Settings: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingRule(null);
-    setFormData({ conditionJson: '', recommendation: '' });
+    setFormData({ name: '', conditionJson: '', recommendation: '' });
     setFormError(null);
   };
 
@@ -97,7 +98,11 @@ export const Settings: React.FC = () => {
   const handleSubmit = async () => {
     setFormError(null);
 
-    // Validate recommendation
+    // Validate name & recommendation
+    if (!formData.name.trim()) {
+      setFormError('Rule name is required');
+      return;
+    }
     if (!formData.recommendation.trim()) {
       setFormError('Recommendation text is required');
       return;
@@ -111,9 +116,10 @@ export const Settings: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const payload: CreateRulePayload = {
+      const payload = {
+        name: formData.name.trim(),
         condition_json: conditionJson,
-        recommendation: formData.recommendation,
+        recommendation: formData.recommendation.trim(),
       };
 
       if (editingRule) {
@@ -414,6 +420,25 @@ export const Settings: React.FC = () => {
               <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
                 Define the condition (JSON) and recommendation for this anomaly detection rule.
               </p>
+
+              {/* Rule Name */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                  Rule Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="E.g., High Value Transaction Baseline Spike"
+                  className="w-full p-2.5 rounded-md border text-sm focus:ring-2 focus:border-transparent transition-all mb-4"
+                  style={{
+                    backgroundColor: 'var(--color-background-muted)',
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                />
+              </div>
 
               {/* Condition JSON */}
               <div>

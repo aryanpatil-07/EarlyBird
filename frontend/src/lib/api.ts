@@ -149,11 +149,22 @@ class ApiClient {
   }
 
   async resolveCase(caseId: string, version: number, rationale?: string) {
+    return this.actOnCase(caseId, version, 'ACCEPTED', rationale);
+  }
+
+  async actOnCase(
+    caseId: string,
+    version: number,
+    decision: 'ACCEPTED' | 'REJECTED' | 'MODIFIED' = 'ACCEPTED',
+    rationale?: string,
+    note?: string
+  ) {
     try {
       const response = await this.client.post(`/cases/${caseId}/action`, {
         version,
-        decision: 'ACCEPTED',
-        rationale,
+        decision,
+        rationale: rationale || note,
+        note,
       });
       return response.data;
     } catch (error) {
@@ -161,20 +172,18 @@ class ApiClient {
     }
   }
 
-  async escalateCase(caseId: string, version: number, reason: string) {
+  async escalateCase(caseId: string, version: number, reason: string, note?: string) {
     try {
-      const response = await this.client.post(`/cases/${caseId}/escalate`, { version, reason });
+      const response = await this.client.post(`/cases/${caseId}/escalate`, { version, reason, note });
       return response.data;
     } catch (error) {
       throw this.normalizeError(error);
     }
   }
 
-  async getAuditLog(entityType: string, entityId: string) {
+  async getAuditLog(params?: { page?: number; pageSize?: number; entity_type?: string; entity_id?: string }) {
     try {
-      const response = await this.client.get('/audit-log', {
-        params: { entity_type: entityType, entity_id: entityId },
-      });
+      const response = await this.client.get('/audit-log', { params });
       return response.data;
     } catch (error) {
       throw this.normalizeError(error);
@@ -182,7 +191,7 @@ class ApiClient {
   }
 
   // Knowledge Base endpoints
-  async searchKB(query: string, limit: number = 20, offset: number = 0) {
+  async searchKB(query: string = '', limit: number = 20, offset: number = 0) {
     try {
       const page = Math.floor(offset / limit) + 1;
       const response = await this.client.get('/knowledge-base', {
@@ -242,8 +251,11 @@ class ApiClient {
   }
 
   async createPlaybookRule(data: {
+    name: string;
+    description?: string;
     condition_json: any;
     recommendation: string;
+    priority?: number;
   }) {
     try {
       const response = await this.client.post('/playbook-rules', data);
@@ -255,7 +267,14 @@ class ApiClient {
 
   async updatePlaybookRule(
     ruleId: string,
-    data: { condition_json: any; recommendation: string }
+    data: {
+      name?: string;
+      description?: string;
+      condition_json?: any;
+      recommendation?: string;
+      priority?: number;
+      enabled?: number;
+    }
   ) {
     try {
       const response = await this.client.patch(`/playbook-rules/${ruleId}`, data);
