@@ -1,8 +1,7 @@
 """
 SLA auto-escalation logic for Case Workflow.
 
-Runs every 1 minute as a background job.
-Escalates cases that exceed the 2-hour SLA window without being RESOLVED or ESCALATED.
+Escalates cases that exceed their SLA deadline (or 2-hour default window) without being RESOLVED or ESCALATED.
 """
 
 from datetime import datetime, timedelta
@@ -14,33 +13,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# SLA window: 2 hours (in seconds)
+# Default SLA window: 2 hours (in seconds)
 SLA_WINDOW_SECONDS = 2 * 60 * 60
 
 
 def check_sla_breaches(db: Session) -> dict:
     """
-    Query cases that exceed SLA and auto-escalate them.
-    
-    A case is eligible for SLA escalation if:
-    - created_at > 2 hours ago
-    - state NOT IN (RESOLVED, ESCALATED)
-    
-    For each eligible case:
-    - Transition to ESCALATED via state machine
-    - Create audit log entry
-    
-    Args:
-        db: SQLAlchemy session
-        
-    Returns:
-        {
-            "success": bool,
-            "checked_count": int (cases checked),
-            "escalated_count": int (cases escalated),
-            "timestamp": str (ISO format),
-            "error": str (if failed)
-        }
+    Query cases that exceed SLA and auto-escalate them idempotently.
     """
     result = {
         "success": False,
@@ -54,11 +33,10 @@ def check_sla_breaches(db: Session) -> dict:
         now = datetime.utcnow()
         sla_cutoff = now - timedelta(seconds=SLA_WINDOW_SECONDS)
         
-        # Query cases that are still open beyond SLA window
-        # NOT IN (RESOLVED, ESCALATED) = still in NEW or ACCEPTED
+        # Query cases that are still open beyond SLA window or past explicit sla_deadline
         cases_to_escalate = db.query(Case).filter(
-            Case.created_at <= sla_cutoff,
-            Case.state.in_([CaseState.NEW.value, CaseState.ACCEPTED.value])
+            Case.state.in_([CaseState.NEW.value, CaseState.ACKNOWLEDGED.value, CaseState.ACCEPTED.value]),
+            (Case.created_at <= sla_cutoff) | (Case.sla_deadline <= now)
         ).all()
         
         result["checked_count"] = len(cases_to_escalate)
@@ -71,26 +49,27 @@ def check_sla_breaches(db: Session) -> dict:
         # Process each case
         for case in cases_to_escalate:
             try:
-                # Create state machine and attempt transition
-                sm = CaseStateMachine(case.state)
-                new_state = sm.validate_transition(CaseState.ESCALATED)
+                old_state = case.state
+                new_state = CaseStateMachine.validate_transition(old_state, CaseState.ESCALATED.value)
                 
-                # Update case
-                case.state = new_state.value
+                case.state = new_state
+                case.version += 1
                 case.updated_at = now
                 db.add(case)
                 
-                # Create audit log entry
+                # Create audit log entry with reconciled fields
                 audit = AuditLog(
-                    case_id=case.id,
-                    action="escalate",
-                    actor="system",
-                    details={
-                        "reason": "SLA breach (2-hour window exceeded)",
-                        "old_state": sm.current_state.value,
-                        "new_state": new_state.value,
+                    entity_type="case",
+                    entity_id=case.case_id,
+                    action="STATE_CHANGE",
+                    actor_id="SYSTEM",
+                    actor_type="SYSTEM",
+                    reason="SLA breach auto-escalation (deadline exceeded)",
+                    changes={
+                        "old_state": old_state,
+                        "new_state": new_state,
                     },
-                    timestamp=now,
+                    created_at=now,
                 )
                 db.add(audit)
                 
@@ -98,16 +77,13 @@ def check_sla_breaches(db: Session) -> dict:
                 
             except InvalidStateTransitionException as e:
                 logger.warning(
-                    f"Cannot escalate case {case.id} (state={case.state}): {e}"
+                    f"Cannot escalate case {case.case_id} (state={case.state}): {e}"
                 )
-                # Skip this case and continue
                 continue
             except Exception as e:
-                logger.error(f"Error escalating case {case.id}: {e}")
-                # Skip this case and continue
+                logger.error(f"Error escalating case {case.case_id}: {e}")
                 continue
         
-        # Commit all changes
         db.commit()
         result["success"] = True
         return result
@@ -128,18 +104,15 @@ def sla_escalation_callback():
     APScheduler callback: run SLA escalation check and log result.
     """
     result = check_sla_breaches(SessionLocal())
-    
     if result["success"]:
         if result["escalated_count"] > 0:
             logger.info(
                 f"[{result['timestamp']}] SLA escalation cycle complete. "
-                f"Checked: {result['checked_count']}, "
-                f"Escalated: {result['escalated_count']}"
+                f"Checked: {result['checked_count']}, Escalated: {result['escalated_count']}"
             )
         else:
             logger.debug(
-                f"[{result['timestamp']}] SLA escalation cycle complete. "
-                f"No breaches detected."
+                f"[{result['timestamp']}] SLA escalation cycle complete. No breaches detected."
             )
     else:
         logger.error(

@@ -37,7 +37,7 @@ def setup_database():
     print("[*] Creating new tables...")
     Base.metadata.create_all(engine)
     
-    print("[✓] Database schema created")
+    print("[OK] Database schema created")
     return engine
 
 def seed_users(engine):
@@ -49,12 +49,12 @@ def seed_users(engine):
     
     try:
         users = [
-            User(user_id="1", role="REVIEWER"),
-            User(user_id="2", role="TEAM_LEAD"),
+            User(user_id="1", name="Reviewer Alex", role="REVIEWER", is_active=True),
+            User(user_id="2", name="Team Lead Sarah", role="TEAM_LEAD", is_active=True),
         ]
         session.add_all(users)
         session.commit()
-        print(f"[✓] Seeded {len(users)} users")
+        print(f"[OK] Seeded {len(users)} users")
     finally:
         session.close()
 
@@ -87,7 +87,7 @@ def load_kaggle_dataset(engine, csv_path="data/creditcard.csv", limit=10000):
         
         session.add_all(entities)
         session.commit()
-        print(f"[✓] Created {len(entities)} card entities")
+        print(f"[OK] Created {len(entities)} card entities")
         
         # Insert transactions
         print(f"[*] Inserting {len(df)} transactions...")
@@ -115,7 +115,7 @@ def load_kaggle_dataset(engine, csv_path="data/creditcard.csv", limit=10000):
         
         session.add_all(transactions)
         session.commit()
-        print(f"[✓] Inserted {len(transactions)} transactions")
+        print(f"[OK] Inserted {len(transactions)} transactions")
         
         # Verify
         tx_count = session.query(Transaction).count()
@@ -161,7 +161,7 @@ def seed_playbook_rules(engine):
         
         session.add_all(rules)
         session.commit()
-        print(f"[✓] Seeded {len(rules)} playbook rules")
+        print(f"[OK] Seeded {len(rules)} playbook rules")
         return True
     except Exception as e:
         print(f"[!] Error seeding rules: {e}")
@@ -199,7 +199,7 @@ def main():
         print()
         
         print("=" * 60)
-        print("✓ Database setup complete!")
+        print("[OK] Database setup complete!")
         print("=" * 60)
         print()
         print("Next steps:")
