@@ -230,10 +230,6 @@ export const Settings: React.FC = () => {
               key={rule.id}
               className="rounded-2xl border border-white/[0.06] bg-[#111218] p-5 shadow-lg transition-colors hover:border-white/[0.12]"
             >
-                backgroundColor: 'var(--color-background-alt)',
-                borderColor: 'var(--color-border)',
-              }}
-            >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   {/* Condition */}
