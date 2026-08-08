@@ -7,6 +7,8 @@
     "@radix-ui/react-dropdown-menu": "^2.0.5",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tabs": "^1.0.4",
+    "@types/animejs": "^3.1.13",
+    "animejs": "^3.2.2",
     "axios": "^1.6.0",
     "chart.js": "^4.4.0",
     "class-variance-authority": "^0.7.0",

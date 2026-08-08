@@ -29,12 +29,18 @@ class CaseActionRequest(BaseModel):
     decision: Optional[str] = None
     rationale: Optional[str] = None
     note: Optional[str] = None
+    category: Optional[str] = None
+    verification_methods: Optional[list[str]] = None
+    follow_up_action: Optional[str] = None
 
 
 class CaseEscalateRequest(BaseModel):
     version: int
     reason: Optional[str] = None
     note: Optional[str] = None
+    category: Optional[str] = None
+    verification_methods: Optional[list[str]] = None
+    priority_level: Optional[str] = None
 
 
 def iso(value: Optional[datetime]) -> Optional[str]:
@@ -52,6 +58,8 @@ def legacy_state(state: str) -> str:
 def case_sort_state_values(state: Optional[str]) -> Optional[list[str]]:
     if not state:
         return None
+    if state.strip().upper() == "ALL":
+        return [s.value for s in CaseState]
     values = []
     for raw in state.split(","):
         value = legacy_state(raw.strip().upper())
@@ -175,6 +183,26 @@ def build_case_detail(db: Session, case: Case) -> dict[str, Any]:
     deviation = anomaly.deviation if anomaly else 0
     baseline_stddev = abs(deviation / score) if score else 1
 
+    latest_decision_log = None
+    for log in reversed(audit):
+        if log.changes and (log.changes.get("note") or log.changes.get("category") or log.changes.get("verification_methods") or log.action in ["CASE_ACCEPTED", "CASE_REJECTED", "CASE_MODIFIED", "CASE_ESCALATED", "CASE_RESOLVED"]):
+            latest_decision_log = log
+            break
+
+    decision_summary = None
+    if latest_decision_log and latest_decision_log.changes:
+        changes = latest_decision_log.changes
+        decision_summary = {
+            "action": latest_decision_log.action,
+            "actor": latest_decision_log.actor_id,
+            "actor_name": "Team Lead Sarah" if latest_decision_log.actor_id == "2" else ("Reviewer Alex" if latest_decision_log.actor_id == "1" else latest_decision_log.actor_id),
+            "created_at": iso(latest_decision_log.created_at),
+            "category": changes.get("category"),
+            "verification_methods": changes.get("verification_methods") or [],
+            "follow_up_action": changes.get("follow_up_action"),
+            "rationale": changes.get("note") or latest_decision_log.reason,
+        }
+
     return {
         **queue_item,
         "baseline_mean": baseline_mean,
@@ -190,6 +218,7 @@ def build_case_detail(db: Session, case: Case) -> dict[str, Any]:
         "rootCause": links,
         "related_anomalies": related_ids,
         "recommendations": recommendations,
+        "decision_summary": decision_summary,
         "auditHistory": [
             {
                 "id": str(log.id),
@@ -197,6 +226,7 @@ def build_case_detail(db: Session, case: Case) -> dict[str, Any]:
                 "actor": log.actor_id,
                 "actorId": log.actor_id,
                 "changes": log.changes,
+                "reason": log.reason,
                 "created_at": iso(log.created_at),
                 "createdAt": iso(log.created_at),
             }
@@ -226,6 +256,9 @@ def transition_case(
     action: str,
     version: int,
     note: str = "",
+    category: Optional[str] = None,
+    verification_methods: Optional[list[str]] = None,
+    follow_up_action: Optional[str] = None,
 ) -> Case:
     try:
         check_version(db, case.id, version)
@@ -241,13 +274,16 @@ def transition_case(
     if target_state == CaseState.RESOLVED.value:
         case.resolved_at = datetime.utcnow()
     increment_version(db, case.id)
-    audit_case(
-        db,
-        case,
-        action,
-        user,
-        {"old_state": old_state, "new_state": target_state, "note": note},
-    )
+    
+    changes = {
+        "old_state": old_state,
+        "new_state": target_state,
+        "note": note,
+        "category": category,
+        "verification_methods": verification_methods or [],
+        "follow_up_action": follow_up_action,
+    }
+    audit_case(db, case, action, user, changes)
     return case
 
 
@@ -294,6 +330,16 @@ def get_cases(
     }
 
 
+@router.post("/trigger-detection")
+def trigger_detection(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    """Manually trigger detection & correlation cycle on demand."""
+    from app.detection.service import run_detection_cycle
+    return run_detection_cycle(db, z_threshold=2.0, limit=500)
+
+
 @router.get("/{case_id}")
 def get_case_detail(
     case_id: str,
@@ -324,11 +370,27 @@ def act_on_case(
 
     try:
         target = CaseState.RESOLVED.value if case.state != CaseState.NEW.value else CaseState.ACCEPTED.value
+        note_text = request.rationale or request.note or ""
         if target == CaseState.ACCEPTED.value:
-            transition_case(db, case, current_user, target, "CASE_ACKNOWLEDGED", request.version, request.rationale or request.note or "")
-            transition_case(db, case, current_user, CaseState.RESOLVED.value, f"CASE_{decision}", case.version, request.rationale or request.note or "")
+            transition_case(
+                db, case, current_user, target, "CASE_ACKNOWLEDGED", request.version,
+                note=note_text, category=request.category,
+                verification_methods=request.verification_methods,
+                follow_up_action=request.follow_up_action,
+            )
+            transition_case(
+                db, case, current_user, CaseState.RESOLVED.value, f"CASE_{decision}", case.version,
+                note=note_text, category=request.category,
+                verification_methods=request.verification_methods,
+                follow_up_action=request.follow_up_action,
+            )
         else:
-            transition_case(db, case, current_user, CaseState.RESOLVED.value, f"CASE_{decision}", request.version, request.rationale or request.note or "")
+            transition_case(
+                db, case, current_user, CaseState.RESOLVED.value, f"CASE_{decision}", request.version,
+                note=note_text, category=request.category,
+                verification_methods=request.verification_methods,
+                follow_up_action=request.follow_up_action,
+            )
         kb_entry = generate_kb_entry_from_case(case, db)
         if not db.query(KnowledgeBase).filter(KnowledgeBase.case_id == case.case_id).first():
             db.add(KnowledgeBase(case_id=case.case_id, title=kb_entry["title"], content=kb_entry["content"]))
@@ -357,7 +419,12 @@ def escalate_case(
         raise HTTPException(status_code=400, detail="Escalation reason must be at least 10 characters")
     case = get_case_or_404(db, case_id)
     try:
-        transition_case(db, case, current_user, CaseState.ESCALATED.value, "CASE_ESCALATED", request.version, reason)
+        transition_case(
+            db, case, current_user, CaseState.ESCALATED.value, "CASE_ESCALATED", request.version,
+            note=reason, category=request.category,
+            verification_methods=request.verification_methods,
+            follow_up_action="ESCALATE_FOR_APPROVAL",
+        )
         db.commit()
         db.refresh(case)
         return build_case_detail(db, case)
@@ -374,7 +441,13 @@ def escalate_case(
 def accept_case(case_id: str, request: CaseActionRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     case = get_case_or_404(db, case_id)
     try:
-        transition_case(db, case, current_user, CaseState.ACCEPTED.value, "CASE_ACKNOWLEDGED", request.version, request.note or "")
+        transition_case(
+            db, case, current_user, CaseState.ACCEPTED.value, "CASE_ACKNOWLEDGED", request.version,
+            note=request.rationale or request.note or "",
+            category=request.category,
+            verification_methods=request.verification_methods,
+            follow_up_action=request.follow_up_action,
+        )
         db.commit()
         db.refresh(case)
         return build_case_detail(db, case)

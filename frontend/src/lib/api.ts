@@ -139,32 +139,23 @@ class ApiClient {
     }
   }
 
-  async acceptCase(caseId: string, version: number, note?: string) {
-    try {
-      const response = await this.client.post(`/cases/${caseId}/accept`, { version, note });
-      return response.data;
-    } catch (error) {
-      throw this.normalizeError(error);
-    }
-  }
-
-  async resolveCase(caseId: string, version: number, rationale?: string) {
-    return this.actOnCase(caseId, version, 'ACCEPTED', rationale);
-  }
-
-  async actOnCase(
+  async acceptCase(
     caseId: string,
     version: number,
-    decision: 'ACCEPTED' | 'REJECTED' | 'MODIFIED' = 'ACCEPTED',
-    rationale?: string,
-    note?: string
+    options?: {
+      note?: string;
+      category?: string;
+      verification_methods?: string[];
+      follow_up_action?: string;
+    }
   ) {
     try {
-      const response = await this.client.post(`/cases/${caseId}/action`, {
+      const response = await this.client.post(`/cases/${caseId}/accept`, {
         version,
-        decision,
-        rationale: rationale || note,
-        note,
+        note: options?.note,
+        category: options?.category,
+        verification_methods: options?.verification_methods,
+        follow_up_action: options?.follow_up_action,
       });
       return response.data;
     } catch (error) {
@@ -172,9 +163,74 @@ class ApiClient {
     }
   }
 
-  async escalateCase(caseId: string, version: number, reason: string, note?: string) {
+  async resolveCase(
+    caseId: string,
+    version: number,
+    rationale?: string,
+    options?: {
+      category?: string;
+      verification_methods?: string[];
+      follow_up_action?: string;
+    }
+  ) {
+    return this.actOnCase(caseId, version, 'ACCEPTED', rationale, options?.category, options?.verification_methods, options?.follow_up_action);
+  }
+
+  async actOnCase(
+    caseId: string,
+    version: number,
+    decision: 'ACCEPTED' | 'REJECTED' | 'MODIFIED' = 'ACCEPTED',
+    rationale?: string,
+    category?: string,
+    verification_methods?: string[],
+    follow_up_action?: string,
+    note?: string
+  ) {
     try {
-      const response = await this.client.post(`/cases/${caseId}/escalate`, { version, reason, note });
+      const response = await this.client.post(`/cases/${caseId}/action`, {
+        version,
+        decision,
+        rationale: rationale || note,
+        note: note || rationale,
+        category,
+        verification_methods,
+        follow_up_action,
+      });
+      return response.data;
+    } catch (error) {
+      throw this.normalizeError(error);
+    }
+  }
+
+  async escalateCase(
+    caseId: string,
+    version: number,
+    reason: string,
+    options?: {
+      category?: string;
+      verification_methods?: string[];
+      priority_level?: string;
+      note?: string;
+    }
+  ) {
+    try {
+      const response = await this.client.post(`/cases/${caseId}/escalate`, {
+        version,
+        reason,
+        note: options?.note || reason,
+        category: options?.category,
+        verification_methods: options?.verification_methods,
+        priority_level: options?.priority_level,
+      });
+      return response.data;
+    } catch (error) {
+      throw this.normalizeError(error);
+    }
+  }
+
+  async triggerDetection() {
+    try {
+      const response = await this.client.post('/cases/trigger-detection');
       return response.data;
     } catch (error) {
       throw this.normalizeError(error);

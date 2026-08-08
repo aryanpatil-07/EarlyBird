@@ -55,8 +55,7 @@ def create_or_dedup_case(
         )
         db.add(existing_case)
         db.add(audit)
-        db.commit()
-        db.refresh(existing_case)
+        db.flush()
         return existing_case
 
     # Create new case
@@ -94,8 +93,7 @@ def create_or_dedup_case(
         created_at=now
     )
     db.add(audit)
-    db.commit()
-    db.refresh(case)
+    db.flush()
     return case
 
 

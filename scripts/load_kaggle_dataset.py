@@ -25,8 +25,18 @@ import json
 import hashlib
 
 # Add backend to path so we can import app modules
-backend_path = Path(__file__).parent.parent / "backend"
-sys.path.insert(0, str(backend_path))
+# Handle both local (project root) and Docker (/app) contexts
+script_dir = Path(__file__).parent
+possible_paths = [
+    script_dir.parent / "backend",  # Local: scripts/../backend
+    Path("/app"),                    # Docker: /app (app code at root)
+    script_dir.parent,               # Docker volume mount: scripts/..
+]
+
+for path in possible_paths:
+    if (path / "app" / "database.py").exists():
+        sys.path.insert(0, str(path))
+        break
 
 from app.database import SessionLocal, engine
 from app.models import Base, Entity, Transaction

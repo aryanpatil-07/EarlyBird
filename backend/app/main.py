@@ -30,7 +30,22 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     logger.info("Starting EarlyBird application...")
     
-    # Startup: Initialize database and scheduler
+    # Startup: Initialize database, default users, and scheduler
+    try:
+        from app.models import User
+        from app.database import SessionLocal
+        with SessionLocal() as db_session:
+            if db_session.query(User).count() == 0:
+                logger.info("Seeding default demo users (Reviewer & Team Lead)...")
+                db_session.add_all([
+                    User(user_id="1", name="Reviewer Alex", role="REVIEWER", is_active=True),
+                    User(user_id="2", name="Team Lead Sarah", role="TEAM_LEAD", is_active=True),
+                ])
+                db_session.commit()
+                logger.info("Demo users seeded successfully.")
+    except Exception as e:
+        logger.warning(f"Demo user check: {e}")
+
     try:
         # Start detection cycle: every 5 minutes
         scheduler.add_job(

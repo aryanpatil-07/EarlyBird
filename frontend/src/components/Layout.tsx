@@ -19,7 +19,7 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, switchRole } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
@@ -198,22 +198,52 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </h2>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/settings/rules')}
-              className="p-2 rounded-lg transition-colors duration-200 cursor-pointer"
+          <div className="flex items-center gap-3">
+            <div
+              className="flex items-center rounded-lg p-1"
               style={{
-                color: 'var(--color-text-secondary)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-background-muted)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
+                backgroundColor: 'var(--color-background-muted)',
+                borderColor: 'var(--color-border)',
+                borderWidth: '1px',
               }}
             >
-              <Settings size={20} />
-            </button>
+              <span className="text-xs px-2 font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                Active Role:
+              </span>
+              <button
+                onClick={() => switchRole()}
+                className="px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1.5"
+                style={{
+                  backgroundColor: user?.role === 'TEAM_LEAD' ? '#8B5CF6' : '#10B981',
+                  color: 'white',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                }}
+                title="Click to switch role between Reviewer (Alex) and Team Lead (Sarah)"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                {user?.role === 'TEAM_LEAD' ? 'Team Lead (Sarah)' : 'Reviewer (Alex)'}
+                <span className="text-[10px] opacity-80 ml-1">⇄ Switch</span>
+              </button>
+            </div>
+
+            {user?.role === 'TEAM_LEAD' && (
+              <button
+                onClick={() => navigate('/settings/rules')}
+                className="p-2 rounded-lg transition-colors duration-200 cursor-pointer"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-background-muted)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                title="Playbook Rules"
+              >
+                <Settings size={20} />
+              </button>
+            )}
           </div>
         </header>
 
