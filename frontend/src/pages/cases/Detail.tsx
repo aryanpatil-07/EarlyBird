@@ -346,35 +346,25 @@ export const CaseDetail: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           {!isResolved && (
             <button
               onClick={() => { setModalError(null); setIsActionModalOpen(true); }}
               disabled={actingOn !== null}
-              className="h-8 px-3 text-xs rounded-md font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-              style={{
-                backgroundColor: '#059669',
-                color: 'white',
-              }}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
             >
-              <CheckCircle className="h-3.5 w-3.5" />
-              Take Decision
+              <CheckCircle className="h-4 w-4" />
+              <span>Take Decision</span>
             </button>
           )}
           {!isEscalated && !isResolved && (
             <button
               onClick={() => { setModalError(null); setIsEscalateModalOpen(true); }}
               disabled={actingOn !== null}
-              className="h-8 px-3 text-xs rounded-md font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-              style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                borderColor: 'rgba(239, 68, 68, 0.5)',
-                border: '1px solid',
-                color: '#EF4444',
-              }}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
             >
-              <AlertTriangle className="h-3.5 w-3.5" />
-              Escalate
+              <AlertTriangle className="h-4 w-4" />
+              <span>Escalate</span>
             </button>
           )}
         </div>
@@ -383,27 +373,20 @@ export const CaseDetail: React.FC = () => {
       {/* Investigation Documentation & Resolution Summary Card */}
       {data.decision_summary && (
         <div
-          className="rounded-xl border p-5 shadow-lg space-y-4"
-          style={{
-            backgroundColor: 'var(--color-background-alt)',
-            borderColor: data.state === CaseState.RESOLVED ? 'rgba(16, 185, 129, 0.4)' : (data.state === CaseState.ESCALATED ? 'rgba(245, 158, 11, 0.4)' : 'var(--color-border)'),
-          }}
+          className="rounded-2xl border p-6 shadow-xl space-y-4 bg-[#111218] border-white/[0.06]"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--color-border)' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3.5">
             <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.state === CaseState.RESOLVED ? '#10B981' : (data.state === CaseState.ESCALATED ? '#F59E0B' : '#6366F1') }} />
-              <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.state === CaseState.RESOLVED ? '#10B981' : (data.state === CaseState.ESCALATED ? '#F59E0B' : '#8B5CF6') }} />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
                 Investigation Documentation & Resolution Record
               </h3>
-              <span className="text-xs px-2.5 py-0.5 rounded font-mono font-semibold" style={{
-                backgroundColor: data.state === CaseState.RESOLVED ? 'rgba(16,185,129,0.15)' : (data.state === CaseState.ESCALATED ? 'rgba(245,158,11,0.15)' : 'rgba(99,102,241,0.15)'),
-                color: data.state === CaseState.RESOLVED ? '#34D399' : (data.state === CaseState.ESCALATED ? '#FBBF24' : '#A5B4FC'),
-              }}>
+              <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-semibold bg-violet-500/15 text-violet-300 border border-violet-500/30">
                 {data.decision_summary.action}
               </span>
             </div>
-            <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              <span>Investigator: <strong style={{ color: 'var(--color-primary)' }}>{data.decision_summary.actor_name}</strong></span>
+            <div className="flex items-center gap-3 text-xs text-slate-400">
+              <span>Investigator: <strong className="text-slate-200">{data.decision_summary.actor_name}</strong></span>
               {data.decision_summary.created_at && (
                 <span>• {new Date(data.decision_summary.created_at).toLocaleString()}</span>
               )}
@@ -411,14 +394,14 @@ export const CaseDetail: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-3.5 rounded-lg border" style={{ backgroundColor: 'var(--color-background-muted)', borderColor: 'var(--color-border)' }}>
+            <div className="p-3.5 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Fraud / Anomaly Classification</div>
-              <div className="text-xs font-semibold mt-1 text-indigo-300">
+              <div className="text-xs font-semibold mt-1 text-violet-300">
                 {CLASSIFICATION_OPTIONS.find(c => c.value === data.decision_summary?.category)?.label || data.decision_summary.category || 'Card-Not-Present (CNP) e-Commerce Anomaly'}
               </div>
             </div>
 
-            <div className="p-3.5 rounded-lg border md:col-span-2" style={{ backgroundColor: 'var(--color-background-muted)', borderColor: 'var(--color-border)' }}>
+            <div className="p-3.5 rounded-xl bg-[#0B0C10] border border-white/[0.04] md:col-span-2">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Verification Methods Applied</div>
               <div className="flex flex-wrap gap-1.5">
                 {data.decision_summary.verification_methods && data.decision_summary.verification_methods.length > 0 ? (
@@ -441,14 +424,14 @@ export const CaseDetail: React.FC = () => {
           {data.decision_summary.follow_up_action && (
             <div className="flex items-center gap-2 text-xs">
               <span className="text-slate-400 font-medium">Recommended Follow-up Action:</span>
-              <span className="px-2.5 py-0.5 rounded font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              <span className="px-2.5 py-0.5 rounded-full font-medium bg-purple-500/15 text-purple-300 border border-purple-500/30">
                 {FOLLOW_UP_OPTIONS.find(f => f.value === data.decision_summary?.follow_up_action)?.label || data.decision_summary.follow_up_action}
               </span>
             </div>
           )}
 
           {data.decision_summary.rationale && (
-            <div className="p-3.5 rounded-lg border bg-slate-950/60 border-slate-800">
+            <div className="p-3.5 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
                 Audited Investigation Rationale & Operational Notes
               </div>
@@ -462,60 +445,36 @@ export const CaseDetail: React.FC = () => {
 
       {/* KB Link */}
       {isResolved && data.knowledge_base_entry && (
-        <div
-          className="rounded-lg border-l-4 p-4 flex items-center justify-between"
-          style={{
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            borderColor: 'rgba(16, 185, 129, 0.5)',
-            borderLeftColor: '#10B981',
-          }}
-        >
+        <div className="rounded-2xl border p-4 flex items-center justify-between bg-emerald-950/20 border-emerald-500/30">
           <div>
-            <div
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: '#86EFAC' }}
-            >
+            <div className="text-xs font-bold uppercase tracking-wider text-emerald-300">
               Auto-Generated Knowledge Base Precedent
             </div>
-            <div className="text-sm mt-1 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            <div className="text-sm mt-1 font-semibold text-slate-100">
               {data.knowledge_base_entry.title}
             </div>
           </div>
           <button
             onClick={() => navigate(`/knowledge-base/${data.knowledge_base_entry!.id}`)}
-            className="h-7 px-3 text-xs rounded-md font-medium transition-colors flex items-center gap-1 cursor-pointer"
-            style={{
-              backgroundColor: 'var(--color-background-muted)',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text-secondary)',
-            }}
+            className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-[#12131A] hover:bg-[#181A24] text-slate-200 border border-white/[0.08] transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <LinkIcon className="h-3 w-3" />
-            View in Knowledge Base
+            <LinkIcon className="h-3.5 w-3.5" />
+            <span>View in KB</span>
           </button>
         </div>
       )}
 
-      {/* Tab Navigation */}
-      <div
-        className="flex gap-0 border-b"
-        style={{ borderColor: 'var(--color-border)' }}
-      >
+      {/* Tab Navigation (Pill container) */}
+      <div className="p-1 rounded-xl bg-[#111218] border border-white/[0.06] inline-flex gap-1">
         {['overview', 'evidence', 'recommendations', 'audit'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className="px-4 py-2.5 text-xs font-medium transition-colors border-b-2 cursor-pointer"
-            style={{
-              color:
-                activeTab === tab
-                  ? 'var(--color-primary)'
-                  : 'var(--color-text-muted)',
-              borderBottomColor:
-                activeTab === tab
-                  ? 'var(--color-primary)'
-                  : 'transparent',
-            }}
+            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              activeTab === tab
+                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+            }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>

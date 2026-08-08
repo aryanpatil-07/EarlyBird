@@ -94,37 +94,27 @@ export const KnowledgeBase: React.FC = () => {
     <div className="space-y-4 p-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold mb-1" style={{ color: 'var(--color-foreground)' }}>
+        <h1 className="text-2xl font-bold tracking-tight text-white mb-1">
           Knowledge Base
         </h1>
-        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          Search resolved cases and historical patterns
+        <p className="text-xs text-slate-400">
+          Full-text neural search across auto-generated precedent cases and historical patterns
         </p>
       </div>
 
       {/* Search Input */}
-      <div className="rounded-lg border p-3" style={{
-        backgroundColor: 'var(--color-background-alt)',
-        borderColor: 'var(--color-border)'
-      }}>
+      <div className="rounded-2xl border border-white/[0.06] bg-[#111218] p-3 shadow-lg">
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4" style={{ color: 'var(--color-text-muted)' }} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input
             type="text"
-            placeholder="Search by pattern, merchant, entity..."
+            placeholder="Search by pattern, merchant ID, entity card, or precedent..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 text-sm rounded-md transition-colors border"
-            style={{
-              backgroundColor: 'var(--color-background-muted)',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-foreground)'
-            }}
-            onFocus={(e) => e.currentTarget.style.borderColor = 'var(--color-primary)'}
-            onBlur={(e) => e.currentTarget.style.borderColor = 'var(--color-border)'}
+            className="w-full pl-10 pr-3.5 py-2 text-xs rounded-xl bg-[#08090C] border border-white/[0.06] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500/50 transition-colors"
           />
           {loading && (
-            <Loader className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin" style={{ color: 'var(--color-primary)' }} />
+            <Loader className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-violet-400" />
           )}
         </div>
       </div>

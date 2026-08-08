@@ -4,63 +4,64 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== CSS VARIABLES (Design System) ===== */
+/* ===== CSS VARIABLES (Design System: Sleek Near-Black / OLED) ===== */
 @layer base {
   :root {
-    /* Primary - Vibrant Indigo */
-    --color-primary: #6366F1;
-    --color-primary-light: #818CF8;
-    --color-primary-dark: #4F46E5;
+    /* Primary - Sleek Violet & Indigo */
+    --color-primary: #8B5CF6;
+    --color-primary-light: #A78BFA;
+    --color-primary-dark: #6D28D9;
 
-    /* Secondary - Electric Amber */
-    --color-secondary: #F59E0B;
-    --color-secondary-light: #FCD34D;
+    /* Secondary - Cyan & Electric Amber */
+    --color-secondary: #06B6D4;
+    --color-secondary-light: #67E8F9;
+    --color-warning: #F59E0B;
 
-    /* Accent - Cyan / Purple */
-    --color-accent: #06B6D4;
-    --color-accent-light: #67E8F9;
-    --color-accent-dark: #0891B2;
+    /* Accent - Glowing Violet */
+    --color-accent: #7C3AED;
+    --color-accent-light: #8B5CF6;
+    --color-accent-dark: #5B21B6;
 
-    /* Background (Sleek Dark Mode Slate/OLED) */
-    --color-background: #0B0F19;
-    --color-background-alt: #111827;
-    --color-background-muted: #1E293B;
+    /* Background: Deep Velvety Near-Black (Easy on the eyes) */
+    --color-background: #08090C;
+    --color-background-alt: #111218;
+    --color-background-muted: #161722;
+    --color-background-card: #12131A;
+    --color-background-hover: rgba(255, 255, 255, 0.04);
 
-    /* Foreground (Text + Surface) */
-    --color-foreground: #F8FAFC;
+    /* Foreground / Text */
+    --color-foreground: #FFFFFF;
     --color-text-primary: #F8FAFC;
-    --color-text-secondary: #CBD5E1;
-    --color-text-muted: #94A3B8;
+    --color-text-secondary: #94A3B8;
+    --color-text-muted: #64748B;
 
     /* Semantic */
     --color-success: #10B981;
-    --color-warning: #F59E0B;
     --color-error: #F43F5E;
     --color-destructive: #F43F5E;
-    --color-muted: #1E293B;
-    --color-border: #1E293B;
-    --color-border-hover: #334155;
-    --color-ring: #6366F1;
+    --color-muted: #161722;
+    --color-border: rgba(255, 255, 255, 0.06);
+    --color-border-hover: rgba(255, 255, 255, 0.12);
+    --color-ring: #8B5CF6;
 
     /* Typography */
     --font-heading: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
     --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --font-mono: 'JetBrains Mono', monospace;
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.25);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
-    --shadow-lg: 0 10px 25px rgba(0,0,0,0.45);
-    --shadow-xl: 0 20px 40px rgba(0,0,0,0.6);
+    /* Shadows & Glows */
+    --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.5);
+    --shadow-glow-purple: 0 0 25px rgba(139, 92, 246, 0.25);
+    --shadow-glow-cyan: 0 0 20px rgba(6, 182, 212, 0.2);
 
-    /* Motion / Transitions */
+    /* Transitions */
     --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
     --transition-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
-    --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
-/* ===== RESET & BASE ===== */
+/* ===== RESET & BASE STYLING ===== */
 * {
   margin: 0;
   padding: 0;
@@ -69,6 +70,8 @@
 
 html {
   scroll-behavior: smooth;
+  background-color: var(--color-background);
+  color-scheme: dark;
 }
 
 body {
@@ -78,145 +81,42 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
-code {
+code, kbd, samp, pre {
   font-family: var(--font-mono);
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
-  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-/* ===== ACCESSIBILITY ===== */
-@layer utilities {
-  /* Focus visible for all interactive elements */
-  *:focus-visible {
-    @apply outline-2 outline-offset-2;
-    outline-color: var(--color-ring);
-  }
-
-  /* Keyboard focus for buttons & links */
-  button:focus-visible,
-  a:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible {
-    @apply ring-2 ring-offset-2 ring-amber-500 rounded-md;
-  }
-
-  /* Reduced motion */
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
-
-  /* Print styles */
-  @media print {
-    body {
-      @apply bg-white text-gray-900;
-    }
-  }
-
-  /* Touch target sizing (minimum 44px) */
-  button, a[role="button"], [role="menuitem"], [role="tab"] {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  /* Cursor pointer on interactive */
-  button,
-  a,
-  [role="button"],
-  [role="menuitem"],
-  [role="tab"],
-  input[type="checkbox"],
-  input[type="radio"],
-  select,
-  [onclick] {
-    cursor: pointer;
-  }
-}
-
-/* ===== SCROLLBAR ===== */
+/* Custom sleek dark scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: var(--color-background-muted);
+  background: #08090C;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 4px;
+  background: #1E202E;
+  border-radius: 9999px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: #2D3045;
 }
 
-/* ===== ANIMATIONS ===== */
-@layer utilities {
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
+/* Selection */
+::selection {
+  background-color: rgba(139, 92, 246, 0.3);
+  color: #DDD6FE;
+}
 
-  @keyframes slideInUp {
-    from { 
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to { 
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes slideInDown {
-    from { 
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to { 
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes scaleIn {
-    from { 
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to { 
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  .animate-fade-in {
-    animation: fadeIn var(--transition-normal);
-  }
-
-  .animate-slide-in-up {
-    animation: slideInUp var(--transition-slow);
-  }
-
-  .animate-slide-in-down {
-    animation: slideInDown var(--transition-slow);
-  }
-
-  .animate-scale-in {
-    animation: scaleIn var(--transition-normal);
-  }
+/* Modal and dialog spring animations */
+.triage-modal-dialog {
+  transform-origin: center center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }

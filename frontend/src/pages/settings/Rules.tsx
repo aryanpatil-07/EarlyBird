@@ -180,38 +180,29 @@ export const Settings: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
+          <h1 className="text-2xl font-bold tracking-tight text-white mb-1">
             Playbook Rules
           </h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {isTeamLead ? 'Manage anomaly detection rules' : 'View active rules (read-only)'}
+          <p className="text-xs text-slate-400">
+            {isTeamLead ? 'Manage automated anomaly detection rules and thresholds' : 'Active playbook rules (read-only mode)'}
           </p>
         </div>
         {isTeamLead && (
           <button
             onClick={() => handleOpenModal()}
-            className="gap-2 text-white h-10 px-4 rounded-md font-medium transition-colors flex items-center"
-            style={{
-              backgroundColor: 'var(--color-primary)',
-            }}
+            className="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-600/25 border border-violet-400/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
           >
             <Plus className="h-4 w-4" />
-            Create Rule
+            <span>Create Rule</span>
           </button>
         )}
       </div>
 
       {/* Error message */}
       {error && (
-        <div
-          className="rounded-lg border p-4 flex items-start gap-3"
-          style={{
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            borderColor: 'rgba(139, 0, 0, 0.3)',
-          }}
-        >
-          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-error)' }} />
-          <p className="text-sm" style={{ color: 'var(--color-error)' }}>
+        <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 text-rose-400" />
+          <p className="text-xs text-rose-300">
             {error}
           </p>
         </div>
@@ -219,23 +210,14 @@ export const Settings: React.FC = () => {
 
       {/* Rules List */}
       {rules.length === 0 ? (
-        <div
-          className="rounded-lg border p-12 text-center"
-          style={{
-            backgroundColor: 'var(--color-background-alt)',
-            borderColor: 'var(--color-border)',
-          }}
-        >
-          <p className="mb-4" style={{ color: 'var(--color-text-muted)' }}>
-            No rules defined yet
+        <div className="rounded-2xl border border-white/[0.06] bg-[#111218] p-12 text-center shadow-xl">
+          <p className="mb-4 text-xs text-slate-400">
+            No playbook rules defined yet
           </p>
           {isTeamLead && (
             <button
               onClick={() => handleOpenModal()}
-              className="text-white rounded-md font-medium transition-colors px-4 py-2"
-              style={{
-                backgroundColor: 'var(--color-primary)',
-              }}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 text-white shadow-lg shadow-violet-600/25 cursor-pointer"
             >
               Create your first rule
             </button>
@@ -246,8 +228,8 @@ export const Settings: React.FC = () => {
           {rules.map((rule) => (
             <div
               key={rule.id}
-              className="rounded-lg border p-5 transition-colors"
-              style={{
+              className="rounded-2xl border border-white/[0.06] bg-[#111218] p-5 shadow-lg transition-colors hover:border-white/[0.12]"
+            >
                 backgroundColor: 'var(--color-background-alt)',
                 borderColor: 'var(--color-border)',
               }}
