@@ -1,10 +1,9 @@
 /**
  * SLA Badge Component
- * Displays SLA status with color coding and remaining time
+ * Displays SLA status with subtle color coding and countdown
  */
 
 import React, { useEffect, useState } from 'react';
-import { Badge } from '../ui/Badge';
 import { SLA_WINDOW_MS } from '../../lib/constants';
 
 interface SLABadgeProps {
@@ -13,7 +12,7 @@ interface SLABadgeProps {
 
 export const SLABadge: React.FC<SLABadgeProps> = ({ createdAt }) => {
   const [remaining, setRemaining] = useState<string>('');
-  const [variant, setVariant] = useState<'warning' | 'destructive' | 'success'>('success');
+  const [urgency, setUrgency] = useState<'urgent' | 'warning' | 'normal'>('normal');
 
   useEffect(() => {
     const calculateSLA = () => {
@@ -22,38 +21,44 @@ export const SLABadge: React.FC<SLABadgeProps> = ({ createdAt }) => {
       const elapsed = now - created;
       const remainingMs = Math.max(0, SLA_WINDOW_MS - elapsed);
 
-      // Determine variant
-      if (remainingMs === 0) {
-        setVariant('destructive');
-      } else if (remainingMs < 60 * 60 * 1000) {
-        setVariant('destructive');
+      if (remainingMs === 0 || remainingMs < 60 * 60 * 1000) {
+        setUrgency('urgent');
       } else if (remainingMs < 2 * 60 * 60 * 1000) {
-        setVariant('warning');
+        setUrgency('warning');
       } else {
-        setVariant('success');
+        setUrgency('normal');
       }
 
-      // Format remaining time
       const hours = Math.floor(remainingMs / (60 * 60 * 1000));
       const mins = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
       setRemaining(`${hours}h ${mins}m`);
     };
 
     calculateSLA();
-    const interval = setInterval(calculateSLA, 30000); // Update every 30s
-
+    const interval = setInterval(calculateSLA, 15000);
     return () => clearInterval(interval);
   }, [createdAt]);
 
-  const variantMap = {
-    success: 'success',
-    warning: 'warning',
-    destructive: 'destructive',
-  } as const;
+  const styleClasses = {
+    urgent: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+    warning: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    normal: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  }[urgency];
 
   return (
-    <Badge variant={variantMap[variant]}>
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium border tracking-tight ${styleClasses}`}
+    >
+      <span
+        className={`w-1.5 h-1.5 rounded-full ${
+          urgency === 'urgent'
+            ? 'bg-rose-400 animate-pulse'
+            : urgency === 'warning'
+            ? 'bg-amber-400'
+            : 'bg-emerald-400'
+        }`}
+      />
       {remaining}
-    </Badge>
+    </span>
   );
 };
