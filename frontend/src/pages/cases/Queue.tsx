@@ -151,9 +151,9 @@ export const CaseQueue: React.FC = () => {
           <button
             onClick={handleTriggerDetection}
             disabled={triggering}
-            className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-600/25 border border-violet-400/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
+            className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-sky-500/25 border border-sky-400/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
           >
-            <Zap size={14} className={triggering ? 'animate-spin text-amber-300' : 'text-violet-200'} />
+            <Zap size={14} className={triggering ? 'animate-spin text-amber-300' : 'text-sky-200'} />
             <span>{triggering ? 'Scanning...' : 'Trigger Detection Engine'}</span>
           </button>
           <button
@@ -167,11 +167,11 @@ export const CaseQueue: React.FC = () => {
       </div>
 
       {triggerMsg && (
-        <div className="rounded-xl border border-violet-500/30 bg-violet-950/20 px-4 py-3 flex items-center justify-between text-xs text-violet-200 shadow-sm">
+        <div className="rounded-xl border border-sky-500/30 bg-sky-950/20 px-4 py-3 flex items-center justify-between text-xs text-sky-200 shadow-sm">
           <span>{triggerMsg}</span>
           <button
             onClick={() => setTriggerMsg(null)}
-            className="text-violet-400 hover:text-white font-medium ml-4 cursor-pointer"
+            className="text-sky-400 hover:text-white font-medium ml-4 cursor-pointer"
           >
             Dismiss
           </button>
@@ -180,7 +180,7 @@ export const CaseQueue: React.FC = () => {
 
       {/* Filter and Search Controls Toolbar */}
       <div className="p-2.5 rounded-2xl bg-[#111218] border border-white/[0.06] flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between shadow-lg">
-        {/* State Filter Tabs (Like inspo pill button group) */}
+        {/* State Filter Tabs (Light Blue Segmented Control) */}
         <div className="flex items-center gap-1 p-1 rounded-xl bg-[#08090C] border border-white/[0.04]">
           {(['ALL', 'NEW', 'ESCALATED', 'RESOLVED'] as StateFilter[]).map((tab) => (
             <button
@@ -191,7 +191,7 @@ export const CaseQueue: React.FC = () => {
               }}
               className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 stateFilter === tab
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/30'
+                  ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
               }`}
             >
@@ -212,7 +212,7 @@ export const CaseQueue: React.FC = () => {
                 setSearchEntity(e.target.value);
                 setPage(0);
               }}
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-[#08090C] border border-white/[0.06] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500/50 transition-all"
+              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-[#08090C] border border-white/[0.06] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all"
             />
           </div>
 
@@ -220,7 +220,7 @@ export const CaseQueue: React.FC = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortField)}
-              className="px-3 py-1.5 text-xs rounded-xl bg-[#08090C] border border-white/[0.06] text-slate-300 focus:outline-none focus:border-violet-500/50 cursor-pointer appearance-none pr-7"
+              className="px-3 py-1.5 text-xs rounded-xl bg-[#08090C] border border-white/[0.06] text-slate-300 focus:outline-none focus:border-sky-500/50 cursor-pointer appearance-none pr-7"
             >
               <option value="sla">SLA (Urgent First)</option>
               <option value="created_at">Newest First</option>
@@ -241,7 +241,7 @@ export const CaseQueue: React.FC = () => {
       {/* Loading Skeleton */}
       {loading && (
         <div className="rounded-2xl border border-white/[0.06] bg-[#111218] p-12 text-center shadow-xl">
-          <div className="inline-block h-7 w-7 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-500 mb-3" />
+          <div className="inline-block h-7 w-7 animate-spin rounded-full border-2 border-sky-500/30 border-t-sky-500 mb-3" />
           <p className="text-xs text-slate-400 font-medium">Scanning live anomaly queue...</p>
         </div>
       )}
@@ -286,7 +286,7 @@ export const CaseQueue: React.FC = () => {
                     <TableCell className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-300">
                       {caseRow.id.slice(0, 8)}
                     </TableCell>
-                    <TableCell className="py-3.5 px-4 text-xs font-mono font-medium text-indigo-300">
+                    <TableCell className="py-3.5 px-4 text-xs font-mono font-medium text-sky-300">
                       {caseRow.entity_id}
                     </TableCell>
                     <TableCell className="py-3.5 px-4">
@@ -308,7 +308,7 @@ export const CaseQueue: React.FC = () => {
                           e.stopPropagation();
                           handleCaseClick(caseRow.id);
                         }}
-                        className="px-3 py-1 text-xs font-semibold rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-md shadow-violet-600/20 transition-all cursor-pointer active:scale-95"
+                        className="px-3 py-1 text-xs font-semibold rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-md shadow-sky-500/20 transition-all cursor-pointer active:scale-95"
                       >
                         Review
                       </button>

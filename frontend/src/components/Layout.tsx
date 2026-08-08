@@ -1,7 +1,7 @@
 /**
  * Main Layout Component
  * Unified, seamless sidebar + navbar design matching modern fintech aesthetic
- * Deep near-black background (#08090C), subtle borders, vibrant violet accents
+ * Deep near-black background (#08090C), subtle borders, light blue / cyan accents
  */
 
 import React, { useState } from 'react';
@@ -61,7 +61,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const userRoleSubtitle = isTeamLead ? 'Supervisory Lead' : 'Fraud Investigator';
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#08090C] text-slate-100 font-sans antialiased selection:bg-violet-500/30 selection:text-violet-200">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#08090C] text-slate-100 font-sans antialiased selection:bg-sky-500/30 selection:text-sky-200">
       {/* Sidebar Navigation */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0B0C10] border-r border-white/[0.06] transition-transform duration-300 md:relative md:translate-x-0 flex flex-col justify-between ${
@@ -72,13 +72,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Logo Header */}
           <div className="px-6 py-5 flex items-center justify-between border-b border-white/[0.04]">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-500 to-purple-400 flex items-center justify-center font-black text-sm text-white shadow-lg shadow-violet-500/30 tracking-wider">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-400 via-cyan-500 to-blue-600 flex items-center justify-center font-black text-sm text-white shadow-lg shadow-sky-500/30 tracking-wider">
                 EB
               </div>
               <div>
                 <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
                   {APP_NAME}
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400" />
                 </h1>
                 <p className="text-[10px] text-slate-400 font-medium tracking-wide">
                   Fraud Anomaly Radar
@@ -111,7 +111,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     }}
                     className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-3 cursor-pointer ${
                       active
-                        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/25 border border-violet-400/20'
+                        ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-500/25 border border-sky-400/20'
                         : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
                     }`}
                   >
@@ -125,21 +125,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-3.5 border-t border-white/[0.05] space-y-2">
-          {/* Live Telemetry Status */}
-          <div className="px-3 py-2 rounded-xl bg-[#12131A] border border-white/[0.04] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <span className="text-[11px] font-medium text-slate-300">Detection Engine</span>
-            </div>
-            <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300">
-              LIVE
-            </span>
-          </div>
-
+        <div className="p-3.5 border-t border-white/[0.05]">
           {/* Logout Button */}
           <button
             onClick={handleLogout}
@@ -169,14 +155,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 type="button"
                 className="px-3 py-1.5 rounded-xl bg-[#12131A] border border-white/[0.08] hover:border-white/[0.15] text-xs font-semibold text-slate-200 flex items-center gap-2 transition-all cursor-pointer shadow-sm"
               >
-                <Activity size={14} className="text-violet-400" />
+                <Activity size={14} className="text-sky-400" />
                 <span>EarlyBird Core</span>
                 <ChevronDown size={13} className="text-slate-400" />
               </button>
             </div>
           </div>
 
-          {/* Middle: Integrated Search Bar (matching inspiration) */}
+          {/* Middle: Integrated Search Bar */}
           <div className="hidden sm:flex items-center">
             <div className="relative w-64 md:w-80">
               <Search
@@ -186,7 +172,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <input
                 type="text"
                 placeholder="Search card, entity ID, or keyword..."
-                className="w-full pl-9 pr-3.5 py-1.5 text-xs rounded-xl bg-[#12131A] border border-white/[0.06] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500/60 focus:ring-1 focus:ring-violet-500/30 transition-all"
+                className="w-full pl-9 pr-3.5 py-1.5 text-xs rounded-xl bg-[#12131A] border border-white/[0.06] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/60 focus:ring-1 focus:ring-sky-500/30 transition-all"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     navigate('/cases');
@@ -199,7 +185,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Right: Unified User Profile & Role Switcher Pill */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-3 p-1.5 pl-2.5 pr-2 rounded-2xl bg-[#12131A] border border-white/[0.08] shadow-sm">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shadow-inner">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 to-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-inner">
                 {userInitials}
               </div>
               <div className="hidden md:block text-left pr-1">
@@ -208,7 +194,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
               <button
                 onClick={() => switchRole()}
-                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
                 title="Switch persona between Reviewer and Team Lead"
               >
                 <ArrowRightLeft size={12} />

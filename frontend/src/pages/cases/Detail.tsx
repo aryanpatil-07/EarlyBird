@@ -377,11 +377,11 @@ export const CaseDetail: React.FC = () => {
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3.5">
             <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.state === CaseState.RESOLVED ? '#10B981' : (data.state === CaseState.ESCALATED ? '#F59E0B' : '#8B5CF6') }} />
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.state === CaseState.RESOLVED ? '#10B981' : (data.state === CaseState.ESCALATED ? '#F59E0B' : '#38BDF8') }} />
               <h3 className="text-sm font-bold uppercase tracking-wider text-white">
                 Investigation Documentation & Resolution Record
               </h3>
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-semibold bg-violet-500/15 text-violet-300 border border-violet-500/30">
+              <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-semibold bg-sky-500/15 text-sky-300 border border-sky-500/30">
                 {data.decision_summary.action}
               </span>
             </div>
@@ -396,7 +396,7 @@ export const CaseDetail: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-3.5 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Fraud / Anomaly Classification</div>
-              <div className="text-xs font-semibold mt-1 text-violet-300">
+              <div className="text-xs font-semibold mt-1 text-sky-300">
                 {CLASSIFICATION_OPTIONS.find(c => c.value === data.decision_summary?.category)?.label || data.decision_summary.category || 'Card-Not-Present (CNP) e-Commerce Anomaly'}
               </div>
             </div>
@@ -424,7 +424,7 @@ export const CaseDetail: React.FC = () => {
           {data.decision_summary.follow_up_action && (
             <div className="flex items-center gap-2 text-xs">
               <span className="text-slate-400 font-medium">Recommended Follow-up Action:</span>
-              <span className="px-2.5 py-0.5 rounded-full font-medium bg-purple-500/15 text-purple-300 border border-purple-500/30">
+              <span className="px-2.5 py-0.5 rounded-full font-medium bg-sky-500/15 text-sky-300 border border-sky-500/30">
                 {FOLLOW_UP_OPTIONS.find(f => f.value === data.decision_summary?.follow_up_action)?.label || data.decision_summary.follow_up_action}
               </span>
             </div>
@@ -472,7 +472,7 @@ export const CaseDetail: React.FC = () => {
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               activeTab === tab
-                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/30'
+                ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/30'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
             }`}
           >

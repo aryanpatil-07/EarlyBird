@@ -190,7 +190,7 @@ export const Settings: React.FC = () => {
         {isTeamLead && (
           <button
             onClick={() => handleOpenModal()}
-            className="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-600/25 border border-violet-400/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            className="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-sky-500/25 border border-sky-400/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
           >
             <Plus className="h-4 w-4" />
             <span>Create Rule</span>
@@ -217,7 +217,7 @@ export const Settings: React.FC = () => {
           {isTeamLead && (
             <button
               onClick={() => handleOpenModal()}
-              className="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 text-white shadow-lg shadow-violet-600/25 cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 text-white shadow-lg shadow-sky-500/25 cursor-pointer"
             >
               Create your first rule
             </button>

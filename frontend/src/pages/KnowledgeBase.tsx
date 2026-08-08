@@ -111,21 +111,18 @@ export const KnowledgeBase: React.FC = () => {
             placeholder="Search by pattern, merchant ID, entity card, or precedent..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-10 pr-3.5 py-2 text-xs rounded-xl bg-[#08090C] border border-white/[0.06] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500/50 transition-colors"
+            className="w-full pl-10 pr-3.5 py-2 text-xs rounded-xl bg-[#08090C] border border-white/[0.06] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-colors"
           />
           {loading && (
-            <Loader className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-violet-400" />
+            <Loader className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-sky-400" />
           )}
         </div>
       </div>
 
       {/* Error State */}
       {error && (
-        <div className="rounded-lg border p-3" style={{
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          borderColor: 'rgba(239, 68, 68, 0.3)'
-        }}>
-          <p className="text-red-400 text-xs">{error}</p>
+        <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-3">
+          <p className="text-rose-300 text-xs">{error}</p>
         </div>
       )}
 
@@ -133,7 +130,7 @@ export const KnowledgeBase: React.FC = () => {
       {query.trim() ? (
         <div className="space-y-3">
           {/* Results Header */}
-          <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             {loading ? (
               'Searching...'
             ) : results.length > 0 ? (
@@ -151,18 +148,12 @@ export const KnowledgeBase: React.FC = () => {
                 return (
                   <div
                     key={entry.id}
-                    className="rounded-lg border overflow-hidden"
-                    style={{
-                      backgroundColor: 'var(--color-background-alt)',
-                      borderColor: 'var(--color-border)'
-                    }}
+                    className="rounded-2xl border border-white/[0.06] bg-[#111218] overflow-hidden shadow-lg"
                   >
                     {/* Entry Header (always visible) */}
                     <div
                       onClick={() => setExpandedEntryId(isExpanded ? null : entry.id)}
-                      className="p-3 cursor-pointer transition-colors"
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.05)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      className="p-3.5 cursor-pointer transition-colors hover:bg-white/[0.03]"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">

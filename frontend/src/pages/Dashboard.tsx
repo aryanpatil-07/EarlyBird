@@ -1,20 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import anime from 'animejs';
 import { apiClient } from '../lib/api';
-import { Card, CardContent } from '../components/ui/index';
 import {
   BarChart3,
-  AlertCircle,
   RefreshCw,
   ShieldCheck,
   Clock,
   Activity,
   Zap,
-  Bot,
   TrendingUp,
   CreditCard,
-  Layers,
-  ArrowUpRight,
 } from 'lucide-react';
 import { ComposedChart, ComposedDataPoint } from '../components/charts/ComposedChart';
 import { RingChart, RingDataItem } from '../components/charts/RingChart';
@@ -122,11 +117,11 @@ export const Dashboard: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-6 w-6 text-violet-400" />
+          <BarChart3 className="h-6 w-6 text-sky-400" />
           <h1 className="text-2xl font-bold text-white">Telemetry & Radar</h1>
         </div>
         <div className="rounded-2xl border border-white/[0.06] bg-[#111218] p-16 text-center shadow-xl">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-500 mb-3" />
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-sky-500/30 border-t-sky-500 mb-3" />
           <p className="text-xs text-slate-400 font-mono">Synthesizing real-time telemetry feed...</p>
         </div>
       </div>
@@ -155,11 +150,10 @@ export const Dashboard: React.FC = () => {
   const mttr = metrics.mttr_hours ?? 0.45;
   const dedup = (metrics.dedup_rate ?? metrics.detection_rate ?? 0) * (metrics.dedup_rate !== undefined ? 100 : 1);
   const slaCompliance = metrics.sla_gauge?.compliance_pct ?? (metrics.sla_compliance ?? 98.4);
-  const kbCoverage = (metrics.kb_coverage ?? 0.85) * 100;
   const totalOpenCases = (metrics.counts?.newCases ?? 12) + (metrics.counts?.escalatedCases ?? 6);
   const resolvedCases = metrics.counts?.resolvedCases ?? 20;
 
-  // Ring Chart Data (Triage Breakdown)
+  // Ring Chart Data (Triage Breakdown with Light Blue / Cyan Theme)
   const ringChartData: RingDataItem[] = [
     {
       label: 'Resolved',
@@ -177,7 +171,7 @@ export const Dashboard: React.FC = () => {
       label: 'New / Triage',
       value: metrics.counts?.newCases ?? 12,
       maxValue: Math.max(resolvedCases + totalOpenCases, 40),
-      color: '#8B5CF6', // Violet
+      color: '#38BDF8', // Light Blue / Sky
     },
   ];
 
@@ -199,10 +193,10 @@ export const Dashboard: React.FC = () => {
 
   const timeSeriesData = metrics.time_series && metrics.time_series.length > 0 ? metrics.time_series : defaultTimeSeries;
 
-  // Category Breakdown Data for Horizontal Bar Chart
+  // Category Breakdown Data for Horizontal Bar Chart (Light Blue Accents)
   const defaultCategories: CategoryBarItem[] = [
-    { category: 'Card-Not-Present (CNP) e-Commerce', count: 18, percentage: 42.0, color: '#8B5CF6' },
-    { category: 'Rapid Velocity Burst / Automated Script', count: 11, percentage: 26.0, color: '#F43F5E' },
+    { category: 'Card-Not-Present (CNP) e-Commerce', count: 18, percentage: 42.0, color: '#38BDF8' },
+    { category: 'Rapid Velocity Burst / Automated Script', count: 11, percentage: 26.0, color: '#0EA5E9' },
     { category: 'Compromised Terminal / High-Risk Merchant', count: 7, percentage: 16.0, color: '#F59E0B' },
     { category: 'Geographic Impossibility / IP Conflict', count: 4, percentage: 10.0, color: '#06B6D4' },
     { category: 'Benign High-Value / Cardholder Travel', count: 2, percentage: 6.0, color: '#10B981' },
@@ -212,7 +206,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div ref={containerRef} className="space-y-6">
-      {/* Hero Headline & Telemetry Action Header (matching inspiration style) */}
+      {/* Hero Headline & Telemetry Action Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="text-xs font-semibold tracking-wider uppercase text-slate-400 mb-1">
@@ -220,7 +214,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="flex items-baseline gap-3">
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-heading">
-              $1,025,254<span className="text-violet-400 font-normal">.00</span>
+              $1,025,254<span className="text-sky-400 font-normal">.00</span>
             </h1>
             <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
               <TrendingUp size={12} />
@@ -243,7 +237,7 @@ export const Dashboard: React.FC = () => {
           </button>
           <button
             onClick={() => apiClient.triggerDetection().then(() => fetchMetrics())}
-            className="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-600/25 border border-violet-400/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            className="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-sky-500/25 border border-sky-400/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
           >
             <Zap size={14} className="text-amber-300" />
             <span>Trigger Sweep</span>
@@ -251,9 +245,9 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Hero 3-Column Block (Inspired by the cards in the reference design) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: Multi-Currency / Entity Baselines */}
+      {/* Hero 2-Column Overview (Without the Promo Card) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Left: Multi-Currency & Entity Baselines */}
         <div className="dashboard-reveal-card rounded-2xl bg-[#111218] border border-white/[0.06] p-5 shadow-xl flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -283,85 +277,60 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Virtual Card Graphic */}
-          <div className="p-3.5 rounded-xl bg-gradient-to-tr from-violet-950/80 via-indigo-950/60 to-purple-900/40 border border-violet-500/20 shadow-inner">
-            <div className="flex justify-between items-center text-[11px] text-violet-300 font-mono mb-2">
+          {/* Virtual Card Graphic with Light Blue Gradient */}
+          <div className="p-4 rounded-xl bg-gradient-to-tr from-sky-950/80 via-blue-950/60 to-cyan-900/40 border border-sky-500/20 shadow-inner">
+            <div className="flex justify-between items-center text-[11px] text-sky-300 font-mono mb-2">
               <span className="font-bold">EARLYBIRD RADAR</span>
               <CreditCard size={14} />
             </div>
             <div className="font-mono text-xs text-white tracking-widest font-semibold mb-2">
               •••• •••• •••• 3090
             </div>
-            <div className="flex justify-between items-center text-[10px] text-violet-300/80 font-mono">
+            <div className="flex justify-between items-center text-[10px] text-sky-300/80 font-mono">
               <span>CARDHOLDER VERIFIED</span>
               <span>08/26</span>
             </div>
           </div>
         </div>
 
-        {/* Card 2: AI Anomaly Detection Robot Card (Matching center promo card) */}
-        <div className="dashboard-reveal-card rounded-2xl bg-gradient-to-br from-violet-950/50 via-[#13141F] to-[#111218] border border-violet-500/25 p-5 shadow-xl flex flex-col justify-between text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-300 shadow-lg shadow-violet-600/20">
-              <Bot size={24} />
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-bold text-white">Investigate Smarter with EarlyBird AI</h3>
-            <p className="text-xs text-slate-300/80 mt-1 leading-relaxed px-2">
-              Continuous rolling Z-score baselines, automated root cause correlation, and SLA escalations.
-            </p>
-          </div>
-
-          <div className="pt-1">
-            <button
-              onClick={() => apiClient.triggerDetection().then(() => fetchMetrics())}
-              className="w-full py-2 text-xs font-bold rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.12] transition-all cursor-pointer shadow-sm active:scale-95"
-            >
-              Run Full Diagnostic Sweep
-            </button>
-          </div>
-        </div>
-
-        {/* Card 3: 4 Key Telemetry Metrics */}
+        {/* Right: 4 Key Detection Telemetry Metrics */}
         <div className="dashboard-reveal-card rounded-2xl bg-[#111218] border border-white/[0.06] p-5 shadow-xl flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between border-b border-white/[0.04] pb-2.5">
-            <div className="text-xs font-semibold text-white">Detection Latency & SLA</div>
+            <div className="text-xs font-semibold text-white">Detection Latency & SLA Performance</div>
             <ShieldCheck size={16} className="text-emerald-400" />
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
               <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Clock size={13} className="text-indigo-400" />
+                <Clock size={14} className="text-sky-400" />
                 <span>Mean Time to Detect</span>
               </div>
-              <span className="text-xs font-bold font-mono text-indigo-300">{mttd.toFixed(2)}h</span>
+              <span className="text-xs font-bold font-mono text-sky-300">{mttd.toFixed(2)} hrs</span>
             </div>
 
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
               <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Activity size={13} className="text-emerald-400" />
+                <Activity size={14} className="text-emerald-400" />
                 <span>Mean Time to Resolve</span>
               </div>
-              <span className="text-xs font-bold font-mono text-emerald-300">{mttr.toFixed(2)}h</span>
+              <span className="text-xs font-bold font-mono text-emerald-300">{mttr.toFixed(2)} hrs</span>
             </div>
 
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
               <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Zap size={13} className="text-amber-400" />
-                <span>Alert Deduplication</span>
+                <Zap size={14} className="text-amber-400" />
+                <span>Alert Deduplication Rate</span>
               </div>
               <span className="text-xs font-bold font-mono text-amber-300">{dedup.toFixed(1)}%</span>
             </div>
 
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
               <div className="flex items-center gap-2 text-xs text-slate-400">
-                <ShieldCheck size={13} className="text-violet-400" />
-                <span>SLA Compliance</span>
+                <ShieldCheck size={14} className="text-cyan-400" />
+                <span>SLA Acknowledgment Compliance</span>
               </div>
-              <span className="text-xs font-bold font-mono text-violet-300">{slaCompliance.toFixed(1)}%</span>
+              <span className="text-xs font-bold font-mono text-cyan-300">{slaCompliance.toFixed(1)}%</span>
             </div>
           </div>
         </div>
@@ -374,7 +343,7 @@ export const Dashboard: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.04] pb-3">
             <div>
               <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-violet-500" />
+                <span className="w-2 h-2 rounded-full bg-sky-400" />
                 24-Hour Velocity & Anomaly Oscilloscope
               </h2>
               <p className="text-[11px] text-slate-400">
@@ -383,11 +352,11 @@ export const Dashboard: React.FC = () => {
             </div>
             <div className="flex items-center gap-3 text-[11px] font-mono">
               <div className="flex items-center gap-1.5 text-slate-300">
-                <span className="w-2 h-2 rounded-xs bg-indigo-500 inline-block" />
+                <span className="w-2 h-2 rounded-xs bg-sky-500 inline-block" />
                 <span>Volume</span>
               </div>
-              <div className="flex items-center gap-1.5 text-indigo-300">
-                <span className="w-2 h-1 bg-indigo-400/40 inline-block" />
+              <div className="flex items-center gap-1.5 text-sky-300">
+                <span className="w-2 h-1 bg-sky-400/40 inline-block" />
                 <span>Baseline</span>
               </div>
               <div className="flex items-center gap-1.5 text-rose-400">
@@ -464,7 +433,7 @@ export const Dashboard: React.FC = () => {
                   className="p-2.5 rounded-xl bg-[#0B0C10] border border-white/[0.04] text-xs flex items-center justify-between gap-2"
                 >
                   <div className="flex items-center gap-2 truncate">
-                    <span className="px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-300 font-mono font-bold text-[10px]">
+                    <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-300 font-mono font-bold text-[10px] border border-sky-500/20">
                       {log.action}
                     </span>
                     <span className="text-slate-300 text-[11px] truncate">{log.entity_id}</span>

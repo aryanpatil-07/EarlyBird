@@ -147,18 +147,18 @@ export const ComposedChart: React.FC<ComposedChartProps> = ({
       >
         <defs>
           <linearGradient id="composedAreaGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#818CF8" stopOpacity="0.32" />
-            <stop offset="100%" stopColor="#818CF8" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.30" />
+            <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.02" />
           </linearGradient>
 
           <linearGradient id="composedBarGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#6366F1" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#4F46E5" stopOpacity="0.75" />
+            <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#0284C7" stopOpacity="0.75" />
           </linearGradient>
 
           <linearGradient id="composedBarHover" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#A5B4FC" stopOpacity="1" />
-            <stop offset="100%" stopColor="#6366F1" stopOpacity="0.9" />
+            <stop offset="0%" stopColor="#7DD3FC" stopOpacity="1" />
+            <stop offset="100%" stopColor="#0EA5E9" stopOpacity="0.9" />
           </linearGradient>
 
           <filter id="composedGlow" x="-20%" y="-20%" width="140%" height="140%">
