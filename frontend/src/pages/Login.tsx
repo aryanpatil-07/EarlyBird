@@ -7,6 +7,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+import { EarlyBirdLogo } from '../components/ui/EarlyBirdLogo';
+
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -36,7 +38,7 @@ export const Login: React.FC = () => {
       }}
     >
       <div
-        className="rounded-lg p-8 w-full max-w-md shadow-xl border"
+        className="rounded-2xl p-8 w-full max-w-md shadow-2xl border"
         style={{
           backgroundColor: 'var(--color-background-alt)',
           borderColor: 'var(--color-border)',
@@ -45,20 +47,12 @@ export const Login: React.FC = () => {
       >
         {/* Logo & Title */}
         <div className="mb-8 text-center">
-          <div
-            className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-lg mx-auto mb-4"
-            style={{
-              backgroundColor: 'var(--color-primary)',
-              color: 'var(--color-background)',
-            }}
-          >
-            EB
-          </div>
-          <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-primary)' }}>
+          <EarlyBirdLogo size={64} className="mx-auto mb-3" />
+          <h1 className="text-3xl font-bold mb-1 tracking-tight text-white">
             EarlyBird
           </h1>
-          <p style={{ color: 'var(--color-text-muted)' }}>
-            Fraud Anomaly Detection
+          <p className="text-xs text-slate-400">
+            Real-Time Fraud & Anomaly Radar
           </p>
         </div>
 

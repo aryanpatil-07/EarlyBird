@@ -21,6 +21,7 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 import { APP_NAME } from '../lib/constants';
+import { EarlyBirdLogo } from './ui/EarlyBirdLogo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -72,9 +73,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Logo Header */}
           <div className="px-6 py-5 flex items-center justify-between border-b border-white/[0.04]">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-400 via-cyan-500 to-blue-600 flex items-center justify-center font-black text-sm text-white shadow-lg shadow-sky-500/30 tracking-wider">
-                EB
-              </div>
+              <EarlyBirdLogo size={36} className="h-9 w-9" />
               <div>
                 <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
                   {APP_NAME}
