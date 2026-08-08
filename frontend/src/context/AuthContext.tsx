@@ -19,6 +19,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (userId: string) => Promise<void>;
+  switchRole: (targetRole?: UserRole) => Promise<void>;
   logout: () => void;
   setTokenRefreshCallback: (callback: () => void) => void;
 }
@@ -89,6 +90,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
+  const switchRole = async (targetRole?: UserRole) => {
+    const nextRole = targetRole || (user?.role === UserRole.REVIEWER ? UserRole.TEAM_LEAD : UserRole.REVIEWER);
+    const targetUserId = nextRole === UserRole.TEAM_LEAD ? '2' : '1';
+    await login(targetUserId);
+  };
+
   const logout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
@@ -109,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isLoading,
         isAuthenticated: !!user,
         login,
+        switchRole,
         logout,
         setTokenRefreshCallback,
       }}

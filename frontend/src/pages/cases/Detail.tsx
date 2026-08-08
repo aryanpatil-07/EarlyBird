@@ -6,6 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import anime from 'animejs';
 import { StateBadge } from '../../components/shared/StateBadge';
 import { SLABadge } from '../../components/shared/SLABadge';
 import { apiClient } from '../../lib/api';
@@ -50,8 +51,20 @@ interface AuditLogEntry {
   id: string;
   action: string;
   actor: string;
+  reason?: string;
   changes?: any;
   created_at: string;
+}
+
+interface DecisionSummary {
+  action: string;
+  actor: string;
+  actor_name: string;
+  created_at: string;
+  category?: string;
+  verification_methods?: string[];
+  follow_up_action?: string;
+  rationale?: string;
 }
 
 interface CaseDetailData {
@@ -70,16 +83,45 @@ interface CaseDetailData {
     root_causes: RootCauseLink[];
   };
   recommendations: Recommendation[];
+  decision_summary?: DecisionSummary;
   knowledge_base_entry?: {
     id: string;
     title: string;
   };
 }
 
+const CLASSIFICATION_OPTIONS = [
+  { value: 'CARD_NOT_PRESENT_FRAUD', label: 'Card-Not-Present (CNP) e-Commerce Anomaly' },
+  { value: 'VELOCITY_BURST', label: 'Rapid High-Frequency Transaction Burst' },
+  { value: 'ACCOUNT_TAKEOVER', label: 'Compromised Credentials / Account Takeover' },
+  { value: 'MERCHANT_TERMINAL_COMPROMISE', label: 'Compromised Terminal / High-Risk Merchant' },
+  { value: 'GEOGRAPHIC_IMPOSSIBILITY', label: 'Geographic Impossibility / IP Conflict' },
+  { value: 'LEGITIMATE_HIGH_VALUE', label: 'Verified Authorized Luxury / High-Ticket Purchase' },
+  { value: 'CARDHOLDER_TRAVEL', label: 'Verified Domestic / International Cardholder Travel' },
+  { value: 'BENIGN_RECURRING_BILLING', label: 'Benign Scheduled / Subscription Billing' },
+];
+
+const VERIFICATION_METHODS_OPTIONS = [
+  'Cardholder Phone / SMS Verification',
+  'IP & Geolocation Match Checked',
+  'Device & Browser Fingerprint Analyzed',
+  'Merchant 3D-Secure / EMV Verified',
+  'EWMA Rolling Velocity Baseline Analyzed',
+  'Historical Merchant Spending Pattern Match',
+];
+
+const FOLLOW_UP_OPTIONS = [
+  { value: 'BLOCK_AND_REISSUE', label: 'Block Card & Reissue New Card' },
+  { value: 'ADD_MERCHANT_WATCHLIST', label: 'Add Merchant to Automated Watchlist' },
+  { value: 'TUNE_PLAYBOOK_RULE', label: 'Tune Playbook Rule Threshold' },
+  { value: 'MARK_TRUSTED_BASELINE', label: 'Mark Entity as Trusted Baseline' },
+  { value: 'NO_ACTION_REQUIRED', label: 'No Operational Follow-up Required' },
+];
+
 export const CaseDetail: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
-  useAuth();
+  const { user } = useAuth();
 
   const [data, setData] = useState<CaseDetailData | null>(null);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
@@ -94,9 +136,21 @@ export const CaseDetail: React.FC = () => {
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
 
   const [decision, setDecision] = useState<'ACCEPTED' | 'REJECTED' | 'MODIFIED'>('ACCEPTED');
+  const [category, setCategory] = useState<string>('CARD_NOT_PRESENT_FRAUD');
+  const [selectedVerificationMethods, setSelectedVerificationMethods] = useState<string[]>([
+    'Cardholder Phone / SMS Verification',
+    'EWMA Rolling Velocity Baseline Analyzed',
+  ]);
+  const [followUpAction, setFollowUpAction] = useState<string>('NO_ACTION_REQUIRED');
   const [rationale, setRationale] = useState('');
   const [escalateReason, setEscalateReason] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
+
+  const toggleVerificationMethod = (method: string) => {
+    setSelectedVerificationMethods((prev) =>
+      prev.includes(method) ? prev.filter((m) => m !== method) : [...prev, method]
+    );
+  };
 
   const fetchCaseDetail = async () => {
     if (!caseId) return;
@@ -135,6 +189,19 @@ export const CaseDetail: React.FC = () => {
     const interval = setInterval(updateSla, 1000);
     return () => clearInterval(interval);
   }, [data]);
+
+  // anime.js spring dialog opening
+  useEffect(() => {
+    if (isActionModalOpen || isEscalateModalOpen) {
+      anime({
+        targets: '.triage-modal-dialog',
+        scale: [0.93, 1],
+        opacity: [0, 1],
+        easing: 'easeOutQuart',
+        duration: 320,
+      });
+    }
+  }, [isActionModalOpen, isEscalateModalOpen]);
 
   if (!caseId) {
     return <div className="p-6" style={{ color: 'var(--color-error)' }}>Invalid case ID</div>;
@@ -231,8 +298,6 @@ export const CaseDetail: React.FC = () => {
 
   const isResolved = data.state === CaseState.RESOLVED;
   const isEscalated = data.state === CaseState.ESCALATED;
-  const isNew = data.state === CaseState.NEW;
-  const isAccepted = data.state === CaseState.ACCEPTED;
 
   const anomalyAmount =
     data.baseline_mean + data.anomaly_score * data.baseline_stddev;
@@ -315,6 +380,86 @@ export const CaseDetail: React.FC = () => {
         </div>
       </div>
 
+      {/* Investigation Documentation & Resolution Summary Card */}
+      {data.decision_summary && (
+        <div
+          className="rounded-xl border p-5 shadow-lg space-y-4"
+          style={{
+            backgroundColor: 'var(--color-background-alt)',
+            borderColor: data.state === CaseState.RESOLVED ? 'rgba(16, 185, 129, 0.4)' : (data.state === CaseState.ESCALATED ? 'rgba(245, 158, 11, 0.4)' : 'var(--color-border)'),
+          }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.state === CaseState.RESOLVED ? '#10B981' : (data.state === CaseState.ESCALATED ? '#F59E0B' : '#6366F1') }} />
+              <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>
+                Investigation Documentation & Resolution Record
+              </h3>
+              <span className="text-xs px-2.5 py-0.5 rounded font-mono font-semibold" style={{
+                backgroundColor: data.state === CaseState.RESOLVED ? 'rgba(16,185,129,0.15)' : (data.state === CaseState.ESCALATED ? 'rgba(245,158,11,0.15)' : 'rgba(99,102,241,0.15)'),
+                color: data.state === CaseState.RESOLVED ? '#34D399' : (data.state === CaseState.ESCALATED ? '#FBBF24' : '#A5B4FC'),
+              }}>
+                {data.decision_summary.action}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              <span>Investigator: <strong style={{ color: 'var(--color-primary)' }}>{data.decision_summary.actor_name}</strong></span>
+              {data.decision_summary.created_at && (
+                <span>• {new Date(data.decision_summary.created_at).toLocaleString()}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-3.5 rounded-lg border" style={{ backgroundColor: 'var(--color-background-muted)', borderColor: 'var(--color-border)' }}>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Fraud / Anomaly Classification</div>
+              <div className="text-xs font-semibold mt-1 text-indigo-300">
+                {CLASSIFICATION_OPTIONS.find(c => c.value === data.decision_summary?.category)?.label || data.decision_summary.category || 'Card-Not-Present (CNP) e-Commerce Anomaly'}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-lg border md:col-span-2" style={{ backgroundColor: 'var(--color-background-muted)', borderColor: 'var(--color-border)' }}>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Verification Methods Applied</div>
+              <div className="flex flex-wrap gap-1.5">
+                {data.decision_summary.verification_methods && data.decision_summary.verification_methods.length > 0 ? (
+                  data.decision_summary.verification_methods.map((method, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      <Check className="h-3 w-3" />
+                      {method}
+                    </span>
+                  ))
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                    <Check className="h-3 w-3" />
+                    EWMA Rolling Velocity Baseline Analyzed
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {data.decision_summary.follow_up_action && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-400 font-medium">Recommended Follow-up Action:</span>
+              <span className="px-2.5 py-0.5 rounded font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                {FOLLOW_UP_OPTIONS.find(f => f.value === data.decision_summary?.follow_up_action)?.label || data.decision_summary.follow_up_action}
+              </span>
+            </div>
+          )}
+
+          {data.decision_summary.rationale && (
+            <div className="p-3.5 rounded-lg border bg-slate-950/60 border-slate-800">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                Audited Investigation Rationale & Operational Notes
+              </div>
+              <p className="text-xs leading-relaxed text-slate-200 whitespace-pre-wrap">
+                {data.decision_summary.rationale}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* KB Link */}
       {isResolved && data.knowledge_base_entry && (
         <div
@@ -330,15 +475,15 @@ export const CaseDetail: React.FC = () => {
               className="text-xs font-semibold uppercase tracking-wide"
               style={{ color: '#86EFAC' }}
             >
-              Knowledge Base
+              Auto-Generated Knowledge Base Precedent
             </div>
-            <div className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+            <div className="text-sm mt-1 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
               {data.knowledge_base_entry.title}
             </div>
           </div>
           <button
             onClick={() => navigate(`/knowledge-base/${data.knowledge_base_entry!.id}`)}
-            className="h-7 px-2 text-xs rounded-md font-medium transition-colors flex items-center gap-1"
+            className="h-7 px-3 text-xs rounded-md font-medium transition-colors flex items-center gap-1 cursor-pointer"
             style={{
               backgroundColor: 'var(--color-background-muted)',
               borderColor: 'var(--color-border)',
@@ -346,7 +491,7 @@ export const CaseDetail: React.FC = () => {
             }}
           >
             <LinkIcon className="h-3 w-3" />
-            View
+            View in Knowledge Base
           </button>
         </div>
       )}
@@ -360,7 +505,7 @@ export const CaseDetail: React.FC = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className="px-4 py-2.5 text-xs font-medium transition-colors border-b-2"
+            className="px-4 py-2.5 text-xs font-medium transition-colors border-b-2 cursor-pointer"
             style={{
               color:
                 activeTab === tab
@@ -392,7 +537,7 @@ export const CaseDetail: React.FC = () => {
               <h3 className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--color-text-primary)' }}>
                 Anomaly Details
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div
                   className="p-3 rounded-lg border"
                   style={{
@@ -401,13 +546,13 @@ export const CaseDetail: React.FC = () => {
                   }}
                 >
                   <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                    Entity
+                    Entity (Card)
                   </div>
                   <div className="text-sm font-semibold mt-1" style={{ color: 'var(--color-text-primary)' }}>
                     {data.entity_id}
                   </div>
                   <button
-                    className="mt-2 text-xs flex items-center gap-1 transition-colors"
+                    className="mt-2 text-xs flex items-center gap-1 transition-colors cursor-pointer"
                     style={{ color: 'var(--color-primary)' }}
                     onClick={() => navigator.clipboard.writeText(data.entity_id)}
                   >
@@ -424,13 +569,13 @@ export const CaseDetail: React.FC = () => {
                   }}
                 >
                   <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                    Amount
+                    Transaction Amount
                   </div>
                   <div className="text-sm font-semibold mt-1" style={{ color: 'var(--color-text-primary)' }}>
                     {formatCurrency(anomalyAmount)}
                   </div>
                   <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                    {data.anomaly_score.toFixed(2)}σ
+                    Z-Score: {data.anomaly_score.toFixed(2)}σ
                   </div>
                 </div>
 
@@ -442,62 +587,23 @@ export const CaseDetail: React.FC = () => {
                   }}
                 >
                   <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                    Baseline Mean
+                    Rolling Baseline Mean
                   </div>
                   <div className="text-sm font-semibold mt-1" style={{ color: 'var(--color-text-primary)' }}>
                     {formatCurrency(data.baseline_mean)}
                   </div>
-                </div>
-
-                <div
-                  className="p-3 rounded-lg border"
-                  style={{
-                    backgroundColor: 'var(--color-background-muted)',
-                    borderColor: 'var(--color-border)',
-                  }}
-                >
-                  <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                    Baseline σ
-                  </div>
-                  <div className="text-sm font-semibold mt-1" style={{ color: 'var(--color-text-primary)' }}>
-                    {formatCurrency(data.baseline_stddev)}
+                  <div className="text-xs mt-1 text-slate-400">
+                    StdDev: ±{formatCurrency(data.baseline_stddev)}
                   </div>
                 </div>
               </div>
-
-              {data.related_anomalies.length > 0 && (
-                <div
-                  className="border-t mt-4 pt-4"
-                  style={{ borderColor: 'var(--color-border)' }}
-                >
-                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-muted)' }}>
-                    Related Anomalies
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {data.related_anomalies.map((anomalyId) => (
-                      <div
-                        key={anomalyId}
-                        className="px-2 py-1 rounded text-xs"
-                        style={{
-                          backgroundColor: 'var(--color-background-muted)',
-                          borderColor: 'var(--color-border)',
-                          border: '1px solid',
-                          color: 'var(--color-text-secondary)',
-                        }}
-                      >
-                        {anomalyId.slice(0, 8)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
 
         {/* Evidence Tab */}
         {activeTab === 'evidence' && (
-          <div className="space-y-3 mt-4">
+          <div className="space-y-4 mt-4">
             <div
               className="rounded-lg border p-4"
               style={{
@@ -505,63 +611,43 @@ export const CaseDetail: React.FC = () => {
                 borderColor: 'var(--color-border)',
               }}
             >
-              <h3 className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--color-text-primary)' }}>
-                Root Cause Links
+              <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                Correlated Root Cause Timeline
               </h3>
-              {data.evidence.root_causes.length > 0 ? (
-                <div className="space-y-2">
-                  {data.evidence.root_causes.map((link, idx) => (
+              {data.evidence && data.evidence.root_causes && data.evidence.root_causes.length > 0 ? (
+                <div className="space-y-3">
+                  {data.evidence.root_causes.map((rc, idx) => (
                     <div
                       key={idx}
-                      className="border rounded-lg p-3"
+                      className="p-3.5 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       style={{
                         backgroundColor: 'var(--color-background-muted)',
                         borderColor: 'var(--color-border)',
                       }}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                          {link.link_type}
-                        </div>
-                        <div
-                          className="px-2 py-1 rounded text-xs"
-                          style={{
-                            backgroundColor: 'var(--color-background)',
-                            borderColor: 'var(--color-border)',
-                            border: '1px solid',
-                            color: 'var(--color-text-muted)',
-                          }}
-                        >
-                          {link.transaction_id.slice(0, 8)}
+                      <div>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono">
+                          {rc.link_type}
+                        </span>
+                        <div className="text-xs text-slate-300 mt-1.5 font-medium">
+                          Transaction ID: {rc.transaction_id}
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3 text-xs">
-                        <div>
-                          <div style={{ color: 'var(--color-text-muted)' }}>Entity</div>
-                          <div className="font-medium mt-0.5" style={{ color: 'var(--color-text-primary)' }}>
-                            {link.transaction.entity_id}
+                      {rc.transaction && (
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-slate-100">
+                            {formatCurrency(rc.transaction.amount || 0)}
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            Merchant: {rc.transaction.merchant_id || 'N/A'}
                           </div>
                         </div>
-                        <div>
-                          <div style={{ color: 'var(--color-text-muted)' }}>Amount</div>
-                          <div className="font-medium mt-0.5" style={{ color: 'var(--color-text-primary)' }}>
-                            {formatCurrency(link.transaction.amount)}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={{ color: 'var(--color-text-muted)' }}>Time</div>
-                          <div className="font-medium mt-0.5" style={{ color: 'var(--color-text-primary)' }}>
-                            {formatDate(link.transaction.timestamp).slice(0, 16)}
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                  No root cause links
-                </p>
+                <p className="text-xs text-slate-400">No correlated transactions found for this card.</p>
               )}
             </div>
           </div>
@@ -569,7 +655,7 @@ export const CaseDetail: React.FC = () => {
 
         {/* Recommendations Tab */}
         {activeTab === 'recommendations' && (
-          <div className="space-y-3 mt-4">
+          <div className="space-y-4 mt-4">
             <div
               className="rounded-lg border p-4"
               style={{
@@ -577,36 +663,27 @@ export const CaseDetail: React.FC = () => {
                 borderColor: 'var(--color-border)',
               }}
             >
-              <h3 className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--color-text-primary)' }}>
-                Matching Rules
+              <h3 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                Matching Playbook Rules & Automated Recommendations
               </h3>
-              {data.recommendations.length > 0 ? (
-                <div className="space-y-2">
+              {data.recommendations && data.recommendations.length > 0 ? (
+                <div className="space-y-3">
                   {data.recommendations.map((rec, idx) => (
                     <div
                       key={idx}
-                      className="border rounded-lg p-3 flex items-start gap-2"
-                      style={{
-                        backgroundColor: 'var(--color-background-muted)',
-                        borderColor: 'var(--color-border)',
-                      }}
+                      className="p-3.5 rounded-lg border border-purple-500/30 bg-purple-950/20"
                     >
-                      <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-success)' }} />
-                      <div className="flex-1">
-                        <div className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                          {rec.recommendation_text}
-                        </div>
-                        <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                          {rec.rule_id}
-                        </div>
+                      <div className="text-xs font-bold text-purple-300">
+                        Rule: {rec.rule_id}
+                      </div>
+                      <div className="text-xs text-slate-200 mt-1">
+                        {rec.recommendation_text}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                  No recommendations
-                </p>
+                <p className="text-xs text-slate-400">No specific playbook rules matched this anomaly pattern.</p>
               )}
             </div>
           </div>
@@ -623,159 +700,316 @@ export const CaseDetail: React.FC = () => {
               }}
             >
               <h3 className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--color-text-primary)' }}>
-                Audit Trail
+                Forensic Audit Trail & Decision Logs
               </h3>
               {auditLog.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {auditLog.map((entry, idx) => (
                     <div
                       key={idx}
-                      className="border rounded-lg p-3 flex items-start gap-3"
+                      className="border rounded-lg p-3.5 space-y-2"
                       style={{
                         backgroundColor: 'var(--color-background-muted)',
                         borderColor: 'var(--color-border)',
                       }}
                     >
-                      <div
-                        className="flex-shrink-0 h-1.5 w-1.5 rounded-full mt-1.5"
-                        style={{ backgroundColor: 'var(--color-primary)' }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                              [{entry.action}]
-                            </div>
-                            <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-                              {entry.actor}
-                            </div>
-                          </div>
-                          <div className="text-xs whitespace-nowrap" style={{ color: 'var(--color-text-muted)' }}>
-                            {formatDate(entry.created_at).slice(0, 16)}
-                          </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
+                            [{entry.action}]
+                          </span>
+                          <span className="text-xs font-medium text-slate-300">
+                            Actor: {entry.actor === '2' ? 'Team Lead Sarah' : (entry.actor === '1' ? 'Reviewer Alex' : entry.actor)}
+                          </span>
                         </div>
+                        <span className="text-xs text-slate-400">
+                          {formatDate(entry.created_at)}
+                        </span>
                       </div>
+
+                      {entry.changes && (
+                        <div className="text-xs space-y-1 text-slate-300 pt-1 border-t border-slate-800">
+                          {entry.changes.category && (
+                            <div>
+                              <span className="text-slate-500">Category: </span>
+                              <span className="text-indigo-300 font-medium">
+                                {CLASSIFICATION_OPTIONS.find(c => c.value === entry.changes.category)?.label || entry.changes.category}
+                              </span>
+                            </div>
+                          )}
+                          {entry.changes.verification_methods && entry.changes.verification_methods.length > 0 && (
+                            <div className="flex flex-wrap gap-1 items-center mt-1">
+                              <span className="text-slate-500">Verifications: </span>
+                              {entry.changes.verification_methods.map((m: string, mIdx: number) => (
+                                <span key={mIdx} className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                  ✓ {m}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {entry.changes.follow_up_action && (
+                            <div>
+                              <span className="text-slate-500">Action: </span>
+                              <span className="text-purple-300">
+                                {FOLLOW_UP_OPTIONS.find(f => f.value === entry.changes.follow_up_action)?.label || entry.changes.follow_up_action}
+                              </span>
+                            </div>
+                          )}
+                          {entry.changes.note && (
+                            <div className="mt-1 p-2 rounded bg-slate-950/50 text-slate-200">
+                              <span className="text-slate-500 block mb-0.5">Rationale:</span>
+                              {entry.changes.note}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                  No audit entries
-                </p>
+                <p className="text-xs text-slate-400">No audit entries recorded.</p>
               )}
             </div>
           </div>
         )}
       </div>
 
-      {/* Action Decision Modal */}
+      {/* Structured Action Decision Modal */}
       {isActionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div
-            className="w-full max-w-md rounded-xl border p-5 shadow-2xl space-y-4"
+            className="triage-modal-dialog w-full max-w-xl rounded-xl border p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
             style={{
               backgroundColor: 'var(--color-background-alt)',
               borderColor: 'var(--color-border)',
               color: 'var(--color-text-primary)',
             }}
           >
-            <h3 className="text-lg font-semibold">Reviewer Decision</h3>
+            <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--color-border)' }}>
+              <div>
+                <h3 className="text-lg font-bold">Investigation & Triage Decision Form</h3>
+                <p className="text-xs text-slate-400">Complete structured documentation for audit compliance and knowledge generation</p>
+              </div>
+              <span className="text-xs px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 font-semibold">
+                Actor: {user?.role === 'TEAM_LEAD' ? 'Team Lead (Sarah)' : 'Reviewer (Alex)'}
+              </span>
+            </div>
+
             {modalError && (
               <div className="p-3 rounded text-xs" style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>
                 {modalError}
               </div>
             )}
+
+            {/* Decision Selector */}
             <div>
-              <label className="text-xs font-medium text-slate-400 block mb-2">Select Decision</label>
-              <div className="flex gap-2">
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">1. Operational Decision</label>
+              <div className="grid grid-cols-3 gap-2">
                 {(['ACCEPTED', 'REJECTED', 'MODIFIED'] as const).map((opt) => (
                   <button
                     key={opt}
                     type="button"
                     onClick={() => setDecision(opt)}
-                    className={`flex-1 py-2 text-xs rounded-lg font-medium border transition-all ${
-                      decision === opt ? 'border-indigo-500 bg-indigo-600/20 text-indigo-300' : 'border-slate-700 bg-slate-800/40 text-slate-400'
+                    className={`py-2 text-xs rounded-lg font-semibold border transition-all cursor-pointer ${
+                      decision === opt
+                        ? (opt === 'ACCEPTED' ? 'border-emerald-500 bg-emerald-600/25 text-emerald-300 shadow' : 'border-indigo-500 bg-indigo-600/25 text-indigo-300 shadow')
+                        : 'border-slate-700 bg-slate-800/40 text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    {opt}
+                    {opt === 'ACCEPTED' ? '✓ Accept (Legit)' : (opt === 'REJECTED' ? '✗ Reject (Fraud)' : '⚡ Modify / Custom')}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Classification Dropdown */}
             <div>
-              <label className="text-xs font-medium text-slate-400 block mb-1">
-                Rationale {decision !== 'ACCEPTED' && <span className="text-rose-400">*</span>}
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">2. Fraud / Anomaly Classification</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full p-2.5 text-xs rounded-lg border bg-slate-900/80 border-slate-700 text-slate-200 focus:outline-none focus:border-indigo-500"
+              >
+                {CLASSIFICATION_OPTIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Verification Methods Checklist */}
+            <div>
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">3. Verification Methods Applied (Check all that apply)</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {VERIFICATION_METHODS_OPTIONS.map((method) => {
+                  const isChecked = selectedVerificationMethods.includes(method);
+                  return (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => toggleVerificationMethod(method)}
+                      className={`p-2 text-left text-xs rounded-lg border transition-all flex items-center gap-2 cursor-pointer ${
+                        isChecked
+                          ? 'border-emerald-500/50 bg-emerald-950/30 text-emerald-200 font-medium'
+                          : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-slate-300'
+                      }`}
+                    >
+                      <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] ${isChecked ? 'bg-emerald-600 text-white' : 'border border-slate-700 bg-slate-800'}`}>
+                        {isChecked ? '✓' : ''}
+                      </span>
+                      <span className="truncate">{method}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Follow-up Action */}
+            <div>
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">4. Recommended Follow-up Action</label>
+              <select
+                value={followUpAction}
+                onChange={(e) => setFollowUpAction(e.target.value)}
+                className="w-full p-2.5 text-xs rounded-lg border bg-slate-900/80 border-slate-700 text-slate-200 focus:outline-none focus:border-indigo-500"
+              >
+                {FOLLOW_UP_OPTIONS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Detailed Rationale Textarea */}
+            <div>
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                5. Detailed Investigation Rationale & Notes {decision !== 'ACCEPTED' && <span className="text-rose-400">*</span>}
               </label>
               <textarea
                 value={rationale}
                 onChange={(e) => setRationale(e.target.value)}
-                placeholder={decision === 'ACCEPTED' ? 'Optional rationale...' : 'Required decision rationale...'}
-                className="w-full h-24 p-2.5 text-xs rounded-lg border bg-slate-900/60 border-slate-700 text-slate-200 focus:outline-none focus:border-indigo-500"
+                placeholder="Document your full investigative reasoning, cardholder communications, and evidence justification..."
+                className="w-full h-24 p-2.5 text-xs rounded-lg border bg-slate-900/80 border-slate-700 text-slate-200 focus:outline-none focus:border-indigo-500"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-800">
               <button
+                type="button"
                 onClick={() => setIsActionModalOpen(false)}
-                className="px-3 py-1.5 text-xs rounded-lg font-medium text-slate-400 hover:text-white"
+                className="px-4 py-2 text-xs rounded-lg font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleActionSubmit}
                 disabled={actingOn !== null}
-                className="px-4 py-1.5 text-xs rounded-lg font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                className="px-5 py-2 text-xs rounded-lg font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition-all cursor-pointer flex items-center gap-1.5"
               >
-                {actingOn ? 'Submitting...' : 'Submit Decision'}
+                <CheckCircle className="h-4 w-4" />
+                {actingOn ? 'Recording Documentation...' : 'Submit & Record Decision'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Escalation Modal */}
+      {/* Structured Escalation Modal */}
       {isEscalateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div
-            className="w-full max-w-md rounded-xl border p-5 shadow-2xl space-y-4"
+            className="triage-modal-dialog w-full max-w-lg rounded-xl border p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
             style={{
               backgroundColor: 'var(--color-background-alt)',
-              borderColor: 'var(--color-border)',
+              borderColor: 'rgba(239, 68, 68, 0.4)',
               color: 'var(--color-text-primary)',
             }}
           >
-            <h3 className="text-lg font-semibold text-rose-400 flex items-center gap-2">
+            <div className="flex items-center gap-2 text-rose-400 border-b pb-3" style={{ borderColor: 'var(--color-border)' }}>
               <AlertTriangle className="h-5 w-5" />
-              Escalate Case
-            </h3>
+              <div>
+                <h3 className="text-lg font-bold">Escalate Case to Team Lead</h3>
+                <p className="text-xs text-slate-400">Document suspected high-risk pattern and reasons for escalation</p>
+              </div>
+            </div>
+
             {modalError && (
               <div className="p-3 rounded text-xs" style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>
                 {modalError}
               </div>
             )}
+
             <div>
-              <label className="text-xs font-medium text-slate-400 block mb-1">
-                Escalation Reason <span className="text-rose-400">*</span> (min 10 chars)
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">Primary Suspicion Classification</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full p-2.5 text-xs rounded-lg border bg-slate-900/80 border-slate-700 text-slate-200 focus:outline-none focus:border-rose-500"
+              >
+                {CLASSIFICATION_OPTIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">Initial Checks Completed</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {VERIFICATION_METHODS_OPTIONS.map((method) => {
+                  const isChecked = selectedVerificationMethods.includes(method);
+                  return (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => toggleVerificationMethod(method)}
+                      className={`p-2 text-left text-xs rounded-lg border transition-all flex items-center gap-2 cursor-pointer ${
+                        isChecked
+                          ? 'border-rose-500/50 bg-rose-950/30 text-rose-200 font-medium'
+                          : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-slate-300'
+                      }`}
+                    >
+                      <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] ${isChecked ? 'bg-rose-600 text-white' : 'border border-slate-700 bg-slate-800'}`}>
+                        {isChecked ? '✓' : ''}
+                      </span>
+                      <span className="truncate">{method}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                Escalation Justification & Findings <span className="text-rose-400">*</span> (min 10 characters)
               </label>
               <textarea
                 value={escalateReason}
                 onChange={(e) => setEscalateReason(e.target.value)}
-                placeholder="Detail why this case requires Team Lead escalation..."
-                className="w-full h-28 p-2.5 text-xs rounded-lg border bg-slate-900/60 border-slate-700 text-slate-200 focus:outline-none focus:border-rose-500"
+                placeholder="Detail the anomalous indicators, suspected compromise vectors, or policy exceptions requiring Team Lead override..."
+                className="w-full h-28 p-2.5 text-xs rounded-lg border bg-slate-900/80 border-slate-700 text-slate-200 focus:outline-none focus:border-rose-500"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-800">
               <button
+                type="button"
                 onClick={() => setIsEscalateModalOpen(false)}
-                className="px-3 py-1.5 text-xs rounded-lg font-medium text-slate-400 hover:text-white"
+                className="px-4 py-2 text-xs rounded-lg font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleEscalateSubmit}
                 disabled={actingOn !== null}
-                className="px-4 py-1.5 text-xs rounded-lg font-medium bg-rose-600 hover:bg-rose-500 text-white transition-colors"
+                className="px-5 py-2 text-xs rounded-lg font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-lg transition-all cursor-pointer flex items-center gap-1.5"
               >
-                {actingOn ? 'Escalating...' : 'Confirm Escalation'}
+                <AlertTriangle className="h-4 w-4" />
+                {actingOn ? 'Submitting Escalation...' : 'Confirm Escalation to Team Lead'}
               </button>
             </div>
           </div>
@@ -805,7 +1039,7 @@ export const CaseDetail: React.FC = () => {
                   setIsConflictModalOpen(false);
                   await fetchCaseDetail();
                 }}
-                className="w-full py-2 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors"
+                className="w-full py-2 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors cursor-pointer"
               >
                 Refresh Case State
               </button>

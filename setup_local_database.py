@@ -23,19 +23,20 @@ from app.database import DATABASE_URL
 import pandas as pd
 
 def setup_database():
-    """Set up the database schema."""
+    """Set up the database schema cleanly."""
     print("[*] Setting up database...")
     
-    # Create engine
     engine = create_engine(DATABASE_URL, echo=False)
     
-    # Drop all tables
+    # Force close any open pooled connections
+    engine.dispose()
+    
     print("[*] Dropping existing tables...")
     Base.metadata.drop_all(engine)
     
-    # Create all tables
     print("[*] Creating new tables...")
     Base.metadata.create_all(engine)
+    engine.dispose()
     
     print("[OK] Database schema created")
     return engine
@@ -170,6 +171,71 @@ def seed_playbook_rules(engine):
     finally:
         session.close()
 
+def seed_detection_and_cases(engine):
+    """Run detection engine and seed cases in NEW, ESCALATED, and RESOLVED states."""
+    print("[*] Running detection cycle & creating cases...")
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    try:
+        from app.detection.service import run_detection_cycle
+        from app.models import Case, KnowledgeBase, AuditLog
+        from app.knowledge_base import generate_kb_entry_from_case
+
+        result = run_detection_cycle(session, z_threshold=2.0, limit=10000)
+        print(f"[OK] Detection complete: {result['anomalies_detected']} anomalies, {result['cases_created_or_merged']} cases created")
+
+        cases = session.query(Case).all()
+        for idx, case in enumerate(cases):
+            if idx % 3 == 1:
+                case.state = "ESCALATED"
+                session.add(AuditLog(
+                    entity_type="case",
+                    entity_id=str(case.id),
+                    action="CASE_ESCALATED",
+                    actor_id="1",
+                    changes={"old_state": "NEW", "new_state": "ESCALATED", "note": "High-velocity transaction burst detected on card. Escalating to Team Lead for review."}
+                ))
+            elif idx % 3 == 2:
+                case.state = "RESOLVED"
+                case.resolved_at = datetime.utcnow()
+                session.add(AuditLog(
+                    entity_type="case",
+                    entity_id=str(case.id),
+                    action="CASE_ACCEPTED",
+                    actor_id="2",
+                    changes={"old_state": "ESCALATED", "new_state": "RESOLVED", "note": "Verified with cardholder. Legitimate merchant pattern match."}
+                ))
+                kb = generate_kb_entry_from_case(case, session)
+                if not session.query(KnowledgeBase).filter(KnowledgeBase.case_id == case.case_id).first():
+                    session.add(KnowledgeBase(
+                        case_id=case.case_id,
+                        title=kb["title"],
+                        content=kb["content"],
+                        summary=kb.get("summary", "Case resolved by Team Lead."),
+                        root_cause_summary=kb.get("root_cause_summary", "Velocity burst resolved."),
+                        decision_summary="Accepted transaction after identity verification."
+                    ))
+            else:
+                session.add(AuditLog(
+                    entity_type="case",
+                    entity_id=str(case.id),
+                    action="CASE_CREATED",
+                    actor_id="SYSTEM",
+                    changes={"state": "NEW", "note": "Anomaly detected by EWMA baseline algorithm."}
+                ))
+
+        session.commit()
+        print(f"[OK] Seeded case states (NEW, ESCALATED, RESOLVED) & Knowledge Base articles")
+        return True
+    except Exception as e:
+        print(f"[!] Error running detection & seeding cases: {e}")
+        import traceback
+        traceback.print_exc()
+        session.rollback()
+        return False
+    finally:
+        session.close()
+
 def main():
     """Main setup flow."""
     print("=" * 60)
@@ -197,9 +263,15 @@ def main():
             print("[!] Failed to seed rules")
             return False
         print()
+
+        # Run detection & seed cases
+        if not seed_detection_and_cases(engine):
+            print("[!] Failed to run detection & seed cases")
+            return False
+        print()
         
         print("=" * 60)
-        print("[OK] Database setup complete!")
+        print("[OK] Database setup & seeding complete!")
         print("=" * 60)
         print()
         print("Next steps:")

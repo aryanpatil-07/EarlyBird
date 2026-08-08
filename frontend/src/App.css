@@ -1,56 +1,178 @@
+/* App-wide styles - Dark Mode OLED Theme */
+
+:root {
+  /* Design System Color Palette */
+  --color-primary: #F59E0B;
+  --color-secondary: #FBBF24;
+  --color-accent: #8B5CF6;
+  --color-background: #0F172A;
+  --color-background-alt: #1E293B;
+  --color-foreground: #F8FAFC;
+  --color-text-muted: #94A3B8;
+  --color-border: #334155;
+  --color-error: #EF4444;
+}
+
 .App {
-  text-align: center;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--color-background), var(--color-background-alt));
 }
 
 .App-header {
-  background: white;
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(10px);
   padding: 40px 60px;
-  border-radius: 8px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--color-border);
   max-width: 600px;
   width: 90%;
 }
 
 .App-header h1 {
   font-size: 48px;
-  color: #333;
+  color: var(--color-primary);
   margin-bottom: 8px;
+  font-weight: 700;
 }
 
 .App-header p {
   font-size: 18px;
-  color: #666;
+  color: var(--color-text-muted);
   margin: 12px 0;
 }
 
 .status {
-  background: #f5f5f5;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid var(--color-border);
   padding: 16px;
-  border-radius: 4px;
+  border-radius: 8px;
   margin: 20px 0;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid var(--color-accent);
 }
 
 .status p {
   margin: 0;
   font-size: 16px;
-  color: #333;
+  color: var(--color-foreground);
 }
 
 .status strong {
-  color: #667eea;
+  color: var(--color-accent);
   font-weight: 600;
 }
 
 .subtitle {
   font-style: italic;
-  color: #999;
+  color: var(--color-text-muted);
   margin-top: 20px !important;
   font-size: 14px;
 }
+
+/* Card base style */
+.card {
+  background: var(--color-background-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 200ms ease;
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+}
+
+/* Button base styles */
+.btn-primary {
+  background: var(--color-accent);
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px rgba(139, 92, 246, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--color-primary);
+  color: var(--color-background);
+}
+
+/* Input styles */
+.input-base {
+  background: var(--color-background-alt);
+  border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 200ms ease;
+}
+
+.input-base:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+/* Loading spinner */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .App-header {
+    padding: 32px 24px;
+    width: 95%;
+  }
+
+  .App-header h1 {
+    font-size: 32px;
+  }
+
+  .App-header p {
+    font-size: 16px;
+  }
+}
+
