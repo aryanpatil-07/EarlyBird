@@ -15,29 +15,34 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create playbook_rules table
-    op.create_table(
-        'playbook_rules',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('name', sa.String(255), nullable=False),
-        sa.Column('description', sa.String(500)),
-        sa.Column('condition_json', sa.JSON(), nullable=False),
-        sa.Column('recommendation', sa.String(500), nullable=False),
-        sa.Column('priority', sa.Integer(), default=5),
-        sa.Column('enabled', sa.Integer(), default=1),
-        sa.Column('created_by_id', sa.Integer(), nullable=False),
-        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now()),
-        sa.ForeignKeyConstraint(['created_by_id'], ['users.id']),
-        sa.PrimaryKeyConstraint('id')
-    )
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
     
-    # Create index on enabled and priority for recommendation queries
-    op.create_index(
-        'ix_playbook_rules_enabled_priority',
-        'playbook_rules',
-        ['enabled', 'priority']
-    )
+    if not inspector.has_table('playbook_rules'):
+        # Create playbook_rules table
+        op.create_table(
+            'playbook_rules',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('name', sa.String(255), nullable=False),
+            sa.Column('description', sa.String(500)),
+            sa.Column('condition_json', sa.JSON(), nullable=False),
+            sa.Column('recommendation', sa.String(500), nullable=False),
+            sa.Column('priority', sa.Integer(), default=5),
+            sa.Column('enabled', sa.Integer(), default=1),
+            sa.Column('created_by_id', sa.Integer(), nullable=False),
+            sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
+            sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now()),
+            sa.ForeignKeyConstraint(['created_by_id'], ['users.id']),
+            sa.PrimaryKeyConstraint('id')
+        )
+        
+        # Create index on enabled and priority for recommendation queries
+        op.create_index(
+            'ix_playbook_rules_enabled_priority',
+            'playbook_rules',
+            ['enabled', 'priority'],
+            if_not_exists=True
+        )
 
 
 def downgrade() -> None:

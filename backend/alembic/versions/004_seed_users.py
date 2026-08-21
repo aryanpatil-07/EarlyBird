@@ -18,25 +18,35 @@ depends_on = None
 
 def upgrade() -> None:
     """Seed default users for testing/demo."""
-    users_table = sa.table(
-        'users',
-        sa.column('user_id', sa.String()),
-        sa.column('role', sa.String()),
-        sa.column('created_at', sa.DateTime()),
-    )
+    bind = op.get_bind()
+    conn = bind.connect() if hasattr(bind, 'connect') else bind
     
-    op.bulk_insert(users_table, [
-        {
+    # Check existing users to prevent primary/unique key violation
+    result = conn.execute(sa.text("SELECT user_id FROM users WHERE user_id IN ('1', '2')"))
+    existing_user_ids = {row[0] for row in result.fetchall()}
+    
+    users_to_insert = []
+    if '1' not in existing_user_ids:
+        users_to_insert.append({
             'user_id': '1',
             'role': 'REVIEWER',
             'created_at': datetime.utcnow(),
-        },
-        {
+        })
+    if '2' not in existing_user_ids:
+        users_to_insert.append({
             'user_id': '2',
             'role': 'TEAM_LEAD',
             'created_at': datetime.utcnow(),
-        },
-    ])
+        })
+        
+    if users_to_insert:
+        users_table = sa.table(
+            'users',
+            sa.column('user_id', sa.String()),
+            sa.column('role', sa.String()),
+            sa.column('created_at', sa.DateTime()),
+        )
+        op.bulk_insert(users_table, users_to_insert)
 
 
 def downgrade() -> None:
