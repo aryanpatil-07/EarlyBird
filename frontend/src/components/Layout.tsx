@@ -4,9 +4,10 @@
  * Deep near-black background (#08090C), subtle borders, light blue / cyan accents
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../lib/api';
 import {
   Menu,
   X,
@@ -16,9 +17,8 @@ import {
   ShieldAlert,
   BookOpen,
   Search,
-  ChevronDown,
-  Activity,
-  ArrowRightLeft,
+  Loader2,
+  ChevronRight,
 } from 'lucide-react';
 import { APP_NAME } from '../lib/constants';
 import { EarlyBirdLogo } from './ui/EarlyBirdLogo';
@@ -32,6 +32,119 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Live top 3 search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close search dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Fetch top 3 relevant search results as user types
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setDropdownOpen(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    setDropdownOpen(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const q = searchQuery.trim().toLowerCase();
+
+        // Query Cases and Knowledge Base in parallel
+        const [casesRes, kbRes] = await Promise.allSettled([
+          apiClient.getCases({ limit: 50 }),
+          apiClient.searchKB(searchQuery, 5, 0),
+        ]);
+
+        const combinedResults: any[] = [];
+
+        // Process Cases matches
+        if (casesRes.status === 'fulfilled' && casesRes.value?.cases) {
+          const matchedCases = casesRes.value.cases.filter((c: any) =>
+            (c.id || '').toLowerCase().includes(q) ||
+            (c.entity_id || '').toLowerCase().includes(q) ||
+            (c.state || '').toLowerCase().includes(q) ||
+            (c.severity || '').toLowerCase().includes(q)
+          );
+
+          matchedCases.forEach((c: any) => {
+            combinedResults.push({
+              id: c.id,
+              case_id: c.id,
+              title: `Alert Case ${c.id}`,
+              subtitle: `Card/Entity: ${c.entity_id || 'N/A'} • Score: ${c.anomaly_score ? c.anomaly_score.toFixed(2) + 'σ' : 'N/A'}`,
+              type: 'CASE',
+              badgeText: c.state || 'NEW',
+              badgeColor:
+                c.state === 'RESOLVED'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : c.state === 'ESCALATED'
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                  : 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+              url: `/cases/${c.id}`,
+            });
+          });
+        }
+
+        // Process KB Precedent matches
+        if (kbRes.status === 'fulfilled') {
+          const kbItems = kbRes.value?.items || kbRes.value?.entries || [];
+          kbItems.forEach((k: any) => {
+            if (
+              (k.title || '').toLowerCase().includes(q) ||
+              (k.case_id || '').toLowerCase().includes(q) ||
+              (k.category || '').toLowerCase().includes(q) ||
+              (k.content || '').toLowerCase().includes(q)
+            ) {
+              combinedResults.push({
+                id: `kb-${k.id || k.case_id}`,
+                case_id: k.case_id || String(k.id),
+                title: k.title || `Precedent ${k.case_id}`,
+                subtitle: `Precedent • ${k.category || 'RCA Investigation'}`,
+                type: 'PRECEDENT',
+                badgeText: 'PRECEDENT',
+                badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                url: `/knowledge-base?case=${k.case_id || k.id}`,
+              });
+            }
+          });
+        }
+
+        // Deduplicate by case_id and limit to top 3 items
+        const uniqueMap = new Map<string, any>();
+        combinedResults.forEach((item) => {
+          if (!uniqueMap.has(item.case_id)) {
+            uniqueMap.set(item.case_id, item);
+          }
+        });
+
+        const top3 = Array.from(uniqueMap.values()).slice(0, 3);
+        setSearchResults(top3);
+      } catch (err) {
+        console.error('Search error:', err);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleLogout = () => {
     logout();
@@ -150,8 +263,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </button>
           </div>
 
-          {/* Stretched Integrated Search Bar */}
-          <div className="flex-1 max-w-xl lg:max-w-2xl">
+          {/* Stretched Integrated Search Bar with Top 3 Dropdown */}
+          <div className="flex-1 max-w-xl lg:max-w-2xl relative" ref={searchContainerRef}>
             <div className="relative w-full">
               <Search
                 size={15}
@@ -160,14 +273,103 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <input
                 type="text"
                 placeholder="Search card, entity ID, or forensic keyword..."
-                className="w-full pl-10 pr-4 py-2 text-xs rounded-xl bg-[#11131F]/80 border border-slate-800/60 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/20 transition-all shadow-inner"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => {
+                  if (searchQuery.trim()) setDropdownOpen(true);
+                }}
+                className="w-full pl-10 pr-9 py-2 text-xs rounded-xl bg-[#11131F]/80 border border-slate-800/60 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/20 transition-all shadow-inner"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    navigate('/cases');
+                  if (e.key === 'Escape') {
+                    setDropdownOpen(false);
+                  } else if (e.key === 'Enter') {
+                    setDropdownOpen(false);
+                    navigate(`/cases?search=${encodeURIComponent(searchQuery)}`);
                   }
                 }}
               />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setDropdownOpen(false);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-0.5 cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
+
+            {/* Top 3 Search Results Dropdown */}
+            {dropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 z-50 rounded-2xl bg-[#0D0F18]/95 border border-slate-700/60 shadow-2xl p-2.5 backdrop-blur-2xl animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-slate-800/60 mb-1.5">
+                  <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+                    Top Relevant Results (Max 3)
+                  </span>
+                  {searchLoading && <Loader2 size={12} className="animate-spin text-sky-400" />}
+                </div>
+
+                {searchLoading && searchResults.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                    <Loader2 size={14} className="animate-spin text-sky-400" />
+                    <span>Searching database...</span>
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    No relevant alerts or precedents found for &quot;{searchQuery}&quot;
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {searchResults.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          setSearchQuery('');
+                          navigate(item.url);
+                        }}
+                        className="group flex items-center justify-between p-2.5 rounded-xl border border-transparent hover:border-sky-500/30 hover:bg-sky-500/10 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 pr-2">
+                          <div className="w-8 h-8 rounded-lg bg-slate-800/80 border border-slate-700/50 flex items-center justify-center text-sky-400 group-hover:text-sky-300 group-hover:border-sky-500/40 shrink-0">
+                            {item.type === 'CASE' ? <ShieldAlert size={15} /> : <BookOpen size={15} />}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-slate-200 group-hover:text-white truncate">
+                              {item.title}
+                            </div>
+                            <div className="text-[11px] text-slate-400 truncate">
+                              {item.subtitle}
+                            </div>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${item.badgeColor}`}
+                        >
+                          {item.badgeText}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* View All Footer */}
+                <div
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    navigate('/cases');
+                  }}
+                  className="mt-1.5 pt-2 border-t border-slate-800/60 px-2.5 py-1 text-right"
+                >
+                  <button className="text-[11px] font-medium text-sky-400 hover:text-sky-300 flex items-center justify-end gap-1 ml-auto cursor-pointer">
+                    <span>View all matching alerts in Queue</span>
+                    <ChevronRight size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right: User Profile Pill */}
