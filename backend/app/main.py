@@ -15,6 +15,7 @@ from app.database import init_db, get_db
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.scheduler.detection_cycle import detection_cycle_callback
 from app.scheduler.correlation_cycle import correlation_cycle_callback
+import os
 import logging
 
 # Configure logging
