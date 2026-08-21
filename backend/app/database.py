@@ -47,11 +47,32 @@ def get_db() -> Session:
         db.close()
 
 
+def reconcile_schema():
+    """Ensure all columns defined in SQLAlchemy models exist in the target database."""
+    from app.models import Base
+    import sqlalchemy as sa
+    
+    try:
+        inspector = sa.inspect(engine)
+        with engine.begin() as conn:
+            for table_name, table in Base.metadata.tables.items():
+                if inspector.has_table(table_name):
+                    existing_cols = {col["name"] for col in inspector.get_columns(table_name)}
+                    for col in table.columns:
+                        if col.name not in existing_cols:
+                            col_type = col.type.compile(engine.dialect)
+                            conn.execute(sa.text(f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS "{col.name}" {col_type} NULL'))
+                            logger.info(f"Reconciled schema: added missing column '{col.name}' to table '{table_name}'")
+    except Exception as e:
+        logger.warning(f"Schema reconciliation notice: {e}")
+
+
 def init_db():
-    """Initialize database (create tables from Base metadata)."""
+    """Initialize database (create tables from Base metadata and reconcile columns)."""
     from app.models import Base
     logger.info("Initializing database...")
     Base.metadata.create_all(bind=engine)
+    reconcile_schema()
     logger.info("Database initialized successfully.")
 
 
