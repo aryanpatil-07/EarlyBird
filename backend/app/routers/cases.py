@@ -80,6 +80,30 @@ def get_case_or_404(db: Session, case_ref: str) -> Case:
     if not case:
         case = query.filter(Case.case_id == case_ref).first()
     if not case:
+        # Fallback: if KnowledgeBase entry exists for this case_id, auto-reconcile Case record
+        kb_entry = db.query(KnowledgeBase).filter(KnowledgeBase.case_id == case_ref).first()
+        if kb_entry:
+            case = Case(
+                case_id=case_ref,
+                state="RESOLVED",
+                severity="HIGH",
+                priority=1,
+                version=1,
+                recommendations=[
+                    {
+                        "action": f"Precedent Investigation Archived ({kb_entry.title})",
+                        "priority": "HIGH",
+                        "sla_hours": 2,
+                    }
+                ],
+                created_at=kb_entry.created_at or datetime.utcnow(),
+                updated_at=kb_entry.created_at or datetime.utcnow(),
+                resolved_at=kb_entry.created_at or datetime.utcnow(),
+            )
+            db.add(case)
+            db.commit()
+            db.refresh(case)
+    if not case:
         raise HTTPException(status_code=404, detail=f"Case {case_ref} not found")
     return case
 

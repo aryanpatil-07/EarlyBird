@@ -240,7 +240,26 @@ Multiple failed authentication attempts followed by a billing address change and
                 entry.created_at = entry_time
 
             case_obj = db.query(Case).filter(Case.case_id == p["case_id"]).first()
-            if case_obj:
+            if not case_obj:
+                case_obj = Case(
+                    case_id=p["case_id"],
+                    state="RESOLVED",
+                    severity=p.get("severity", "MEDIUM"),
+                    priority=2,
+                    version=1,
+                    recommendations=[
+                        {
+                            "action": f"Forensic Precedent Archived ({p.get('category', 'RCA')})",
+                            "priority": p.get("severity", "MEDIUM"),
+                            "sla_hours": 2,
+                        }
+                    ],
+                    created_at=entry_time - timedelta(hours=2),
+                    updated_at=entry_time,
+                    resolved_at=entry_time,
+                )
+                db.add(case_obj)
+            else:
                 case_obj.state = "RESOLVED"
                 case_obj.resolved_at = entry_time
 
