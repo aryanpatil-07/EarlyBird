@@ -17,6 +17,8 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://earlybird:earlybird_dev@localhost:5432/earlybird_db"
 )
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # Create engine with connection pooling
 engine: Engine = create_engine(
