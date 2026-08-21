@@ -50,6 +50,22 @@ async def lifespan(app: FastAPI):
                     db_session.add(User(user_id=uid, name=name, role=role, is_active=True))
             db_session.commit()
             logger.info("Demo users verified/seeded successfully.")
+
+            # Auto-seed initial cases, precedents, and playbook rules if DB is empty
+            from app.models import Case
+            case_count = db_session.query(Case).count()
+            if case_count == 0:
+                logger.info("Empty database detected. Auto-seeding initial cases, precedents, and playbook rules...")
+                try:
+                    from scripts.seed_test_data import seed_all
+                    from scripts.seed_playbook_rules import seed_playbook_rules
+                    from scripts.seed_rich_precedents import seed_precedents
+                    seed_all()
+                    seed_playbook_rules()
+                    seed_precedents()
+                    logger.info("Auto-seeding completed successfully!")
+                except Exception as seed_err:
+                    logger.warning(f"Auto-seeding notice: {seed_err}")
     except Exception as e:
         logger.warning(f"Database/demo user initialization: {e}")
 

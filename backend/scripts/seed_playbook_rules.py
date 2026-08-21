@@ -43,7 +43,7 @@ def seed_playbook_rules():
         )
         
         if not os.path.exists(fixture_path):
-            print(f"❌ Fixture file not found: {fixture_path}")
+            print(f"[ERROR] Fixture file not found: {fixture_path}")
             return False
         
         # Load JSON
@@ -74,12 +74,12 @@ def seed_playbook_rules():
         
         session.commit()
         
-        print(f"✅ Successfully seeded {len(rules_data)} playbook rules")
+        print(f"[OK] Successfully seeded {len(rules_data)} playbook rules")
         return True
     
     except Exception as e:
         session.rollback()
-        print(f"❌ Error seeding playbook rules: {e}")
+        print(f"[ERROR] Error seeding playbook rules: {e}")
         return False
     
     finally:

@@ -29,21 +29,25 @@ from app.models import (
 
 
 def seed_users(session):
-    """Create test users."""
-    # Clear all existing users
-    session.query(User).delete()
-    session.commit()
-    
-    users = [
-        User(user_id="12345", role="TEAM_LEAD"),
-        User(user_id="67890", role="REVIEWER"),
-        User(user_id="system", role="TEAM_LEAD"),
+    """Create or verify test users."""
+    users_data = [
+        ("12345", "Team Lead 12345", "TEAM_LEAD"),
+        ("67890", "Reviewer 67890", "REVIEWER"),
+        ("system", "System User", "TEAM_LEAD"),
+        ("1", "Reviewer Alex", "REVIEWER"),
+        ("2", "Team Lead Sarah", "TEAM_LEAD"),
     ]
-    
-    session.add_all(users)
+    user_map = {}
+    for uid, name, role in users_data:
+        u = session.query(User).filter(User.user_id == uid).first()
+        if not u:
+            u = User(user_id=uid, name=name, role=role, is_active=True)
+            session.add(u)
+            session.flush()
+        user_map[uid] = u.id
     session.commit()
-    print(f"✅ Seeded {len(users)} users")
-    return {u.user_id: u.id for u in users}
+    print(f"[OK] Verified {len(users_data)} users")
+    return user_map
 
 
 def seed_transactions(session, count=50):
@@ -71,7 +75,7 @@ def seed_transactions(session, count=50):
     
     session.add_all(transactions)
     session.commit()
-    print(f"✅ Seeded {len(transactions)} transactions")
+    print(f"[OK] Seeded {len(transactions)} transactions")
     return transactions
 
 
@@ -107,7 +111,7 @@ def seed_anomalies(session, transactions):
     
     session.add_all(anomalies)
     session.commit()
-    print(f"✅ Seeded {len(anomalies)} anomalies")
+    print(f"[OK] Seeded {len(anomalies)} anomalies")
     return anomalies
 
 
@@ -155,7 +159,7 @@ def seed_cases(session, anomalies):
     
     session.add_all(cases)
     session.commit()
-    print(f"✅ Seeded {len(cases)} cases")
+    print(f"[OK] Seeded {len(cases)} cases")
     return cases
 
 
@@ -165,7 +169,7 @@ def seed_root_cause_links(session, anomalies):
     session.commit()
     
     if len(anomalies) < 2:
-        print("⚠️  Not enough anomalies to create links (need 2+)")
+        print("[WARN] Not enough anomalies to create links (need 2+)")
         return []
     
     link_types = ["same_entity", "same_merchant", "amount_pattern", "time_window"]
@@ -190,7 +194,7 @@ def seed_root_cause_links(session, anomalies):
     
     session.add_all(links)
     session.commit()
-    print(f"✅ Seeded {len(links)} root cause links")
+    print(f"[OK] Seeded {len(links)} root cause links")
     return links
 
 
@@ -223,7 +227,7 @@ def seed_audit_log(session, user_ids, cases):
     
     session.add_all(logs)
     session.commit()
-    print(f"✅ Seeded {len(logs)} audit log entries")
+    print(f"[OK] Seeded {len(logs)} audit log entries")
     return logs
 
 
@@ -268,7 +272,7 @@ Related anomalies detected and correlated for pattern analysis.
     
     session.add_all(kb_entries)
     session.commit()
-    print(f"✅ Seeded {len(kb_entries)} knowledge base entries")
+    print(f"[OK] Seeded {len(kb_entries)} knowledge base entries")
     return kb_entries
 
 
@@ -291,14 +295,14 @@ def seed_all():
         kb = seed_knowledge_base(session, cases)
         
         print("\n" + "="*50)
-        print("✅ All test data seeded successfully!")
+        print("[OK] All test data seeded successfully!")
         print("="*50 + "\n")
         
         return True
     
     except Exception as e:
         session.rollback()
-        print(f"\n❌ Error seeding test data: {e}")
+        print(f"\n[ERROR] Error seeding test data: {e}")
         import traceback
         traceback.print_exc()
         return False
