@@ -194,9 +194,28 @@ EarlyBird measures system performance across five core metrics:
 
 ## 8. Technology Stack
 
-* **Backend**: Python 3.11, FastAPI, SQLAlchemy 2.0, Alembic, APScheduler, PostgreSQL, Uvicorn, Pytest.
-* **Frontend**: React 18, TypeScript, TailwindCSS, Chart.js / React-ChartJS-2, Anime.js, Lucide Icons.
-* **Orchestration**: Docker Compose, PostgreSQL 15.
+### Backend
+![Python](https://img.shields.io/badge/Python_3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy_2.0-D71F00?style=for-the-badge&logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL_15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Alembic](https://img.shields.io/badge/Alembic-6C757D?style=for-the-badge&logo=python&logoColor=white)
+![APScheduler](https://img.shields.io/badge/APScheduler-4B5563?style=for-the-badge&logo=python&logoColor=white)
+![Uvicorn](https://img.shields.io/badge/Uvicorn-499848?style=for-the-badge&logo=python&logoColor=white)
+![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
+
+### Frontend
+![React](https://img.shields.io/badge/React_18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white)
+![Anime.js](https://img.shields.io/badge/Anime.js-FF4B4B?style=for-the-badge&logo=javascript&logoColor=white)
+![Lucide Icons](https://img.shields.io/badge/Lucide_Icons-F56565?style=for-the-badge&logo=feather&logoColor=white)
+
+### Orchestration & Infrastructure
+![Docker](https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white)
 
 ---
 
