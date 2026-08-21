@@ -19,14 +19,36 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg text-gray-600">Loading...</div>
+      <div className="flex items-center justify-center h-screen bg-[#08090C] text-slate-400">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-sky-500 border-t-transparent mb-3" />
       </div>
     );
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  return <Layout>{children}</Layout>;
+};
+
+const TeamLeadRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#08090C] text-slate-400">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-sky-500 border-t-transparent mb-3" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user?.role !== 'TEAM_LEAD') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Layout>{children}</Layout>;
@@ -69,11 +91,19 @@ function AppContent() {
         }
       />
       <Route
-        path="/settings/rules"
+        path="/knowledge-base/:id"
         element={
           <ProtectedRoute>
-            <Settings />
+            <KnowledgeBase />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings/rules"
+        element={
+          <TeamLeadRoute>
+            <Settings />
+          </TeamLeadRoute>
         }
       />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

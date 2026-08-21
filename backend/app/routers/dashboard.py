@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.database import get_db
-from app.models import Anomaly, AuditLog, Case, KnowledgeBase, Transaction
+from app.models import Anomaly, AuditLog, Case, KnowledgeBase, Transaction, PlaybookRule
 from app.dashboard.metrics import get_all_metrics
 from app.auth import get_current_user
 
@@ -95,6 +95,8 @@ def get_metrics(session: Session = Depends(get_db), _current_user = Depends(get_
         escalated_cases = session.query(Case).filter(Case.state == "ESCALATED").count()
         new_cases = session.query(Case).filter(Case.state == "NEW").count()
 
+        rules_count = session.query(PlaybookRule).filter(PlaybookRule.enabled == 1).count()
+
         return {
             **metrics,
             "mttdMinutes": round(mttd, 2),
@@ -111,6 +113,7 @@ def get_metrics(session: Session = Depends(get_db), _current_user = Depends(get_
                 "escalatedCases": escalated_cases,
                 "newCases": new_cases,
                 "knowledgeBaseEntries": kb_entries,
+                "playbookRules": rules_count,
             },
             "time_series": time_series,
             "triage_breakdown": {

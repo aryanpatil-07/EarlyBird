@@ -248,19 +248,19 @@ export const Dashboard: React.FC = () => {
       {/* Hero 2-Column Overview (Without the Promo Card) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Left: Multi-Currency & Entity Baselines */}
-        <div className="dashboard-reveal-card rounded-2xl bg-[#111218] border border-white/[0.06] p-5 shadow-xl flex flex-col justify-between space-y-4">
+        <div className="dashboard-reveal-card rounded-2xl lg:rounded-3xl bg-[#0E1019]/90 border border-slate-800/60 p-6 shadow-xl flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xs font-semibold text-white">Entity Baselines</div>
               <div className="text-[11px] text-slate-400">Active monitored accounts & cards</div>
             </div>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/[0.04] text-slate-300 border border-white/[0.06]">
+            <span className="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-slate-900/60 text-slate-300 border border-slate-800">
               Real-time
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
+            <div className="p-3.5 rounded-xl bg-[#08090D] border border-slate-800/50">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-base">🇺🇸</span>
                 <span className="text-xs font-bold text-white font-mono">$853,698</span>
@@ -268,7 +268,7 @@ export const Dashboard: React.FC = () => {
               <div className="text-[10px] text-slate-400">USD Core Pool</div>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
+            <div className="p-3.5 rounded-xl bg-[#08090D] border border-slate-800/50">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-base">🇯🇵</span>
                 <span className="text-xs font-bold text-white font-mono">¥154,578</span>
@@ -294,14 +294,14 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Right: 4 Key Detection Telemetry Metrics */}
-        <div className="dashboard-reveal-card rounded-2xl bg-[#111218] border border-white/[0.06] p-5 shadow-xl flex flex-col justify-between space-y-3">
-          <div className="flex items-center justify-between border-b border-white/[0.04] pb-2.5">
+        <div className="dashboard-reveal-card rounded-2xl lg:rounded-3xl bg-[#0E1019]/90 border border-slate-800/60 p-6 shadow-xl flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-800/40 pb-3">
             <div className="text-xs font-semibold text-white">Detection Latency & SLA Performance</div>
             <ShieldCheck size={16} className="text-emerald-400" />
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#08090D] border border-slate-800/50">
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <Clock size={14} className="text-sky-400" />
                 <span>Mean Time to Detect</span>
@@ -309,7 +309,7 @@ export const Dashboard: React.FC = () => {
               <span className="text-xs font-bold font-mono text-sky-300">{mttd.toFixed(2)} hrs</span>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#08090D] border border-slate-800/50">
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <Activity size={14} className="text-emerald-400" />
                 <span>Mean Time to Resolve</span>
@@ -317,7 +317,7 @@ export const Dashboard: React.FC = () => {
               <span className="text-xs font-bold font-mono text-emerald-300">{mttr.toFixed(2)} hrs</span>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#08090D] border border-slate-800/50">
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <Zap size={14} className="text-amber-400" />
                 <span>Alert Deduplication Rate</span>
@@ -325,7 +325,7 @@ export const Dashboard: React.FC = () => {
               <span className="text-xs font-bold font-mono text-amber-300">{dedup.toFixed(1)}%</span>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#0B0C10] border border-white/[0.04]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#08090D] border border-slate-800/50">
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <ShieldCheck size={14} className="text-cyan-400" />
                 <span>SLA Acknowledgment Compliance</span>
@@ -339,14 +339,14 @@ export const Dashboard: React.FC = () => {
       {/* HERO CHARTS ROW: ComposedChart (2 cols) + RingChart (1 col) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Composed Chart */}
-        <div className="dashboard-reveal-card lg:col-span-2 rounded-2xl bg-[#111218] border border-white/[0.06] p-5 shadow-xl space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.04] pb-3">
+        <div className="dashboard-reveal-card lg:col-span-2 rounded-2xl lg:rounded-3xl bg-[#0E1019]/90 border border-slate-800/60 p-6 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/40 pb-3">
             <div>
               <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-sky-400" />
                 24-Hour Velocity & Anomaly Oscilloscope
               </h2>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-400 mt-0.5">
                 Shared time-series with volume columns, EWMA baseline, and anomaly rate trace
               </p>
             </div>
@@ -370,13 +370,13 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Ring Chart: Multi-Ring Case Triage */}
-        <div className="dashboard-reveal-card lg:col-span-1 rounded-2xl bg-[#111218] border border-white/[0.06] p-5 shadow-xl flex flex-col justify-between">
-          <div className="border-b border-white/[0.04] pb-3 mb-2">
+        <div className="dashboard-reveal-card lg:col-span-1 rounded-2xl lg:rounded-3xl bg-[#0E1019]/90 border border-slate-800/60 p-6 shadow-xl flex flex-col justify-between">
+          <div className="border-b border-slate-800/40 pb-3 mb-2">
             <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               Case Resolution & Triage Rings
             </h2>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-400 mt-0.5">
               Concentric lifecycle progress
             </p>
           </div>
@@ -398,17 +398,17 @@ export const Dashboard: React.FC = () => {
       {/* SECONDARY ROW: Horizontal Category Breakdown + Forensic Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Horizontal Bar Chart: Top Fraud Categories */}
-        <div className="dashboard-reveal-card lg:col-span-2 rounded-2xl bg-[#111218] border border-white/[0.06] p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between border-b border-white/[0.04] pb-3">
+        <div className="dashboard-reveal-card lg:col-span-2 rounded-2xl lg:rounded-3xl bg-[#0E1019]/90 border border-slate-800/60 p-6 shadow-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800/40 pb-3">
             <div>
               <h2 className="text-xs font-bold text-white uppercase tracking-wider">
                 Top Anomaly & Fraud Classifications
               </h2>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-400 mt-0.5">
                 Ranked breakdown by operational forensic category
               </p>
             </div>
-            <span className="text-xs px-2.5 py-1 rounded-lg bg-[#0B0C10] font-mono text-slate-300 font-semibold border border-white/[0.04]">
+            <span className="text-xs px-3 py-1 rounded-lg bg-[#08090D] font-mono text-slate-300 font-semibold border border-slate-800">
               {categoryData.reduce((acc, c) => acc + c.count, 0)} Cases Evaluated
             </span>
           </div>
@@ -417,8 +417,8 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Live Forensic Audit Trail */}
-        <div className="dashboard-reveal-card lg:col-span-1 rounded-2xl bg-[#111218] border border-white/[0.06] p-5 shadow-xl flex flex-col justify-between space-y-3">
-          <div className="flex items-center justify-between border-b border-white/[0.04] pb-3">
+        <div className="dashboard-reveal-card lg:col-span-1 rounded-2xl lg:rounded-3xl bg-[#0E1019]/90 border border-slate-800/60 p-6 shadow-xl flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-800/40 pb-3">
             <h2 className="text-xs font-bold text-white uppercase tracking-wider">
               Recent Forensic Activity
             </h2>
@@ -430,7 +430,7 @@ export const Dashboard: React.FC = () => {
               auditLogs.map((log, idx) => (
                 <div
                   key={idx}
-                  className="p-2.5 rounded-xl bg-[#0B0C10] border border-white/[0.04] text-xs flex items-center justify-between gap-2"
+                  className="p-2.5 rounded-xl bg-[#08090D] border border-slate-800/40 text-xs flex items-center justify-between gap-2"
                 >
                   <div className="flex items-center gap-2 truncate">
                     <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-300 font-mono font-bold text-[10px] border border-sky-500/20">

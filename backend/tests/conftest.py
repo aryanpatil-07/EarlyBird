@@ -6,13 +6,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from app.models import Base
 
-# Use test database URL (or same as dev)
+# Use test database URL (defaults to in-memory SQLite to avoid wiping dev database)
 DATABASE_URL_TEST = os.getenv(
-    "DATABASE_URL",
-    "postgresql://earlybird:earlybird_dev@localhost:5432/earlybird_db"
+    "TEST_DATABASE_URL",
+    "sqlite:///:memory:"
 )
 
-engine = create_engine(DATABASE_URL_TEST)
+engine = create_engine(
+    DATABASE_URL_TEST,
+    connect_args={"check_same_thread": False} if DATABASE_URL_TEST.startswith("sqlite") else {}
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

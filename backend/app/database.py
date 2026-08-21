@@ -5,7 +5,7 @@ Phase 0: Base configuration for PostgreSQL connection.
 """
 
 import os
-from sqlalchemy import create_engine, Engine
+from sqlalchemy import create_engine, Engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 import logging
@@ -57,7 +57,7 @@ def test_connection():
     """Test database connection."""
     try:
         with engine.connect() as connection:
-            result = connection.execute("SELECT 1")
+            result = connection.execute(text("SELECT 1"))
             logger.info("Database connection successful.")
             return True
     except Exception as e:
