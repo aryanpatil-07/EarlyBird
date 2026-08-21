@@ -66,29 +66,60 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       try {
         const q = searchQuery.trim().toLowerCase();
 
-        // Query Cases and Knowledge Base in parallel
+        // Query Cases (all states) and Knowledge Base in parallel
         const [casesRes, kbRes] = await Promise.allSettled([
-          apiClient.getCases({ limit: 50 }),
-          apiClient.searchKB(searchQuery, 5, 0),
+          apiClient.getCases({ state: 'ALL', limit: 100 }),
+          apiClient.searchKB(searchQuery, 10, 0),
         ]);
 
         const combinedResults: any[] = [];
 
-        // Process Cases matches
-        if (casesRes.status === 'fulfilled' && casesRes.value?.cases) {
-          const matchedCases = casesRes.value.cases.filter((c: any) =>
-            (c.id || '').toLowerCase().includes(q) ||
-            (c.entity_id || '').toLowerCase().includes(q) ||
-            (c.state || '').toLowerCase().includes(q) ||
-            (c.severity || '').toLowerCase().includes(q)
-          );
+        // Safely extract Cases list
+        let rawCases: any[] = [];
+        if (casesRes.status === 'fulfilled' && casesRes.value) {
+          const val = casesRes.value;
+          if (Array.isArray(val)) {
+            rawCases = val;
+          } else if (val && typeof val === 'object') {
+            rawCases = val.cases || val.items || [];
+          }
+        }
 
-          matchedCases.forEach((c: any) => {
+        // Safely extract KB Precedents list
+        let rawKb: any[] = [];
+        if (kbRes.status === 'fulfilled' && kbRes.value) {
+          const val = kbRes.value;
+          if (Array.isArray(val)) {
+            rawKb = val;
+          } else if (val && typeof val === 'object') {
+            rawKb = val.items || val.entries || val.results || [];
+          }
+        }
+
+        // Process Cases matches
+        rawCases.forEach((c: any) => {
+          if (!c) return;
+          const idStr = String(c.id || '').toLowerCase();
+          const caseIdStr = String(c.case_id || '').toLowerCase();
+          const entityStr = String(c.entity_id || '').toLowerCase();
+          const stateStr = String(c.state || '').toLowerCase();
+          const severityStr = String(c.severity || '').toLowerCase();
+
+          if (
+            idStr.includes(q) ||
+            caseIdStr.includes(q) ||
+            entityStr.includes(q) ||
+            stateStr.includes(q) ||
+            severityStr.includes(q) ||
+            q.includes('case') ||
+            q.includes('alert')
+          ) {
+            const displayId = c.case_id || (typeof c.id === 'string' && c.id.startsWith('CASE-') ? c.id : `CASE-${c.id}`);
             combinedResults.push({
-              id: c.id,
-              case_id: c.id,
-              title: `Alert Case ${c.id}`,
-              subtitle: `Card/Entity: ${c.entity_id || 'N/A'} • Score: ${c.anomaly_score ? c.anomaly_score.toFixed(2) + 'σ' : 'N/A'}`,
+              id: `case-${c.id || c.case_id}`,
+              case_id: c.case_id || String(c.id),
+              title: `Alert Case ${displayId}`,
+              subtitle: `Entity: ${c.entity_id || 'N/A'} • Score: ${c.anomaly_score ? c.anomaly_score.toFixed(2) + 'σ' : 'N/A'}`,
               type: 'CASE',
               badgeText: c.state || 'NEW',
               badgeColor:
@@ -97,34 +128,41 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   : c.state === 'ESCALATED'
                   ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
                   : 'bg-sky-500/20 text-sky-300 border-sky-500/30',
-              url: `/cases/${c.id}`,
+              url: `/cases/${c.case_id || c.id}`,
             });
-          });
-        }
+          }
+        });
 
         // Process KB Precedent matches
-        if (kbRes.status === 'fulfilled') {
-          const kbItems = kbRes.value?.items || kbRes.value?.entries || [];
-          kbItems.forEach((k: any) => {
-            if (
-              (k.title || '').toLowerCase().includes(q) ||
-              (k.case_id || '').toLowerCase().includes(q) ||
-              (k.category || '').toLowerCase().includes(q) ||
-              (k.content || '').toLowerCase().includes(q)
-            ) {
-              combinedResults.push({
-                id: `kb-${k.id || k.case_id}`,
-                case_id: k.case_id || String(k.id),
-                title: k.title || `Precedent ${k.case_id}`,
-                subtitle: `Precedent • ${k.category || 'RCA Investigation'}`,
-                type: 'PRECEDENT',
-                badgeText: 'PRECEDENT',
-                badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-                url: `/knowledge-base?case=${k.case_id || k.id}`,
-              });
-            }
-          });
-        }
+        rawKb.forEach((k: any) => {
+          if (!k) return;
+          const titleStr = String(k.title || '').toLowerCase();
+          const caseIdStr = String(k.case_id || '').toLowerCase();
+          const catStr = String(k.category || '').toLowerCase();
+          const contentStr = String(k.content || '').toLowerCase();
+          const cardStr = String(k.card_id || '').toLowerCase();
+
+          if (
+            titleStr.includes(q) ||
+            caseIdStr.includes(q) ||
+            catStr.includes(q) ||
+            contentStr.includes(q) ||
+            cardStr.includes(q) ||
+            q.includes('case') ||
+            q.includes('precedent')
+          ) {
+            combinedResults.push({
+              id: `kb-${k.id || k.case_id}`,
+              case_id: k.case_id || String(k.id),
+              title: k.title || `Precedent ${k.case_id}`,
+              subtitle: `Precedent • ${k.category || 'RCA Investigation'}`,
+              type: 'PRECEDENT',
+              badgeText: 'PRECEDENT',
+              badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+              url: `/knowledge-base?case=${k.case_id || k.id}`,
+            });
+          }
+        });
 
         // Deduplicate by case_id and limit to top 3 items
         const uniqueMap = new Map<string, any>();
