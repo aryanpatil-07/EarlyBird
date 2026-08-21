@@ -1,8 +1,8 @@
 # EarlyBird — Transaction Fraud Anomaly Detection, Root Cause & Knowledge Platform
 
 **Deployment Links:**
-* **Frontend Application**: [Frontend Deployment Link](#)
-* **Backend API**: [Backend Deployment Link](#)
+* **Frontend Application**: [https://early-bird-iqwbpkgu7-aryan-patils-projects-5d346222.vercel.app/](https://early-bird-iqwbpkgu7-aryan-patils-projects-5d346222.vercel.app/)
+* **Backend API**: [https://earlybird-werz.onrender.com](https://earlybird-werz.onrender.com)
 
 > **EarlyBird** is a real-time transaction fraud anomaly detection platform focused on explainable **Root Cause Analysis (RCA)**, **Auto-Generated Knowledge Base Precedents**, **Auditability**, and **Intelligent Alert Triage**. Built with **Python / FastAPI**, **PostgreSQL**, and **React / TypeScript**.
 
