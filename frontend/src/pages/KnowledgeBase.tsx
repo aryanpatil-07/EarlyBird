@@ -134,30 +134,23 @@ export const KnowledgeBase: React.FC = () => {
     }
   }, [entries, targetEntryId, targetCaseId]);
 
-  // Handle live debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchEntries(query);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query, fetchEntries]);
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const lowerSearchRef = useRef<HTMLDivElement>(null);
 
-  // Filter and sort items locally
+  // Close lower search dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (lowerSearchRef.current && !lowerSearchRef.current.contains(e.target as Node)) {
+        setSearchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter and sort items locally (Main page list remains intact, unaffected by search query)
   const filteredEntries = useMemo(() => {
     let result = [...entries];
-
-    // Instant Search Query Filter
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
-      result = result.filter(
-        (e) =>
-          (e.title || '').toLowerCase().includes(q) ||
-          (e.case_id || '').toLowerCase().includes(q) ||
-          (e.content || '').toLowerCase().includes(q) ||
-          (e.category || '').toLowerCase().includes(q) ||
-          (e.card_id || '').toLowerCase().includes(q)
-      );
-    }
 
     // Filter by Category Tab
     if (activeCategory !== 'ALL') {
@@ -189,6 +182,22 @@ export const KnowledgeBase: React.FC = () => {
 
     return result;
   }, [entries, activeCategory, sortBy]);
+
+  // Top 3 Precedent matches for lower search bar dropdown
+  const top3KbMatches = useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.trim().toLowerCase();
+    return entries
+      .filter(
+        (e) =>
+          (e.title || '').toLowerCase().includes(q) ||
+          (e.case_id || '').toLowerCase().includes(q) ||
+          (e.category || '').toLowerCase().includes(q) ||
+          (e.content || '').toLowerCase().includes(q) ||
+          (e.card_id || '').toLowerCase().includes(q)
+      )
+      .slice(0, 3);
+  }, [entries, query]);
 
   // Format date helper
   const formatDate = (isoString?: string): string => {
@@ -331,26 +340,94 @@ export const KnowledgeBase: React.FC = () => {
       {/* Search & Filter Toolbar */}
       <div className="space-y-3">
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-          {/* Search Box */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          {/* Search Box with Top 3 Precedent Dropdown */}
+          <div className="relative flex-1" ref={lowerSearchRef}>
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
             <input
               type="text"
               placeholder="Search precedents by pattern, merchant ID, card account, or root cause..."
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSearchDropdownOpen(true);
+              }}
+              onFocus={() => {
+                if (query.trim()) setSearchDropdownOpen(true);
+              }}
               className="w-full pl-10 pr-10 py-2.5 text-xs rounded-xl bg-[#111218] border border-white/[0.08] text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500/50 shadow-inner transition-colors"
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearchDropdownOpen(false);
+              }}
             />
             {loading && (
               <Loader className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-sky-400" />
             )}
             {query && !loading && (
               <button
-                onClick={() => setQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-300"
+                onClick={() => {
+                  setQuery('');
+                  setSearchDropdownOpen(false);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-300 cursor-pointer"
               >
                 Clear
               </button>
+            )}
+
+            {/* Top 3 Precedent Results Dropdown (Does NOT affect main list on page) */}
+            {searchDropdownOpen && query.trim() !== '' && (
+              <div className="absolute top-full left-0 right-0 mt-2 z-40 rounded-2xl bg-[#0D0F18]/95 border border-slate-700/60 shadow-2xl p-2.5 backdrop-blur-2xl animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-slate-800/60 mb-1.5">
+                  <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+                    Top Precedent Matches (Max 3)
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    {top3KbMatches.length} match{top3KbMatches.length === 1 ? '' : 'es'}
+                  </span>
+                </div>
+
+                {top3KbMatches.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-slate-400">
+                    No precedents match &quot;{query}&quot;
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {top3KbMatches.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          setExpandedEntryId(item.id);
+                          setSearchDropdownOpen(false);
+                          setTimeout(() => {
+                            const el = entryRefs.current[String(item.id)];
+                            if (el) {
+                              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                          }, 150);
+                        }}
+                        className="group flex items-center justify-between p-2.5 rounded-xl border border-transparent hover:border-sky-500/30 hover:bg-sky-500/10 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 pr-2">
+                          <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
+                            <BookOpen size={15} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-slate-200 group-hover:text-white truncate">
+                              {item.title}
+                            </div>
+                            <div className="text-[11px] text-slate-400 truncate">
+                              {item.case_id} • {item.category || 'Forensic Precedent'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          {renderSeverityBadge(item.severity)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
