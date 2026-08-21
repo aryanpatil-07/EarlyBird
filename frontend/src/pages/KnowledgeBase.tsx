@@ -146,6 +146,19 @@ export const KnowledgeBase: React.FC = () => {
   const filteredEntries = useMemo(() => {
     let result = [...entries];
 
+    // Instant Search Query Filter
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      result = result.filter(
+        (e) =>
+          (e.title || '').toLowerCase().includes(q) ||
+          (e.case_id || '').toLowerCase().includes(q) ||
+          (e.content || '').toLowerCase().includes(q) ||
+          (e.category || '').toLowerCase().includes(q) ||
+          (e.card_id || '').toLowerCase().includes(q)
+      );
+    }
+
     // Filter by Category Tab
     if (activeCategory !== 'ALL') {
       const tabConfig = CATEGORY_TABS.find((t) => t.id === activeCategory);

@@ -90,7 +90,7 @@ export const CaseQueue: React.FC = () => {
   useEffect(() => {
     fetchCases(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, sortBy, stateFilter]);
+  }, [page, sortBy, stateFilter, searchEntity]);
 
   // anime.js staggered row entrance
   useEffect(() => {

@@ -72,17 +72,25 @@ def search_knowledge_base(
             for r in records
         ]
 
-    # Use plainto_tsquery for safe, natural keyword search on PostgreSQL
+    # Use ILIKE + plainto_tsquery for fast instant substring & keyword matching on PostgreSQL
+    like_pattern = f"%{query_clean}%"
     search_sql = text("""
         SELECT 
             id,
             case_id,
             title,
             created_at,
-            ts_rank(to_tsvector('english', content), 
-                   plainto_tsquery('english', :query)) as relevance_score
+            CASE 
+                WHEN title ILIKE :like_pattern THEN 3.0
+                WHEN case_id ILIKE :like_pattern THEN 2.5
+                WHEN content ILIKE :like_pattern THEN 1.5
+                ELSE ts_rank(to_tsvector('english', content), plainto_tsquery('english', :query))
+            END as relevance_score
         FROM knowledge_base
-        WHERE to_tsvector('english', content) @@ plainto_tsquery('english', :query)
+        WHERE title ILIKE :like_pattern
+           OR case_id ILIKE :like_pattern
+           OR content ILIKE :like_pattern
+           OR (to_tsvector('english', content) @@ plainto_tsquery('english', :query))
         ORDER BY relevance_score DESC, created_at DESC
         LIMIT :limit
         OFFSET :offset
@@ -93,6 +101,7 @@ def search_knowledge_base(
             search_sql,
             {
                 "query": query_clean,
+                "like_pattern": like_pattern,
                 "limit": limit,
                 "offset": offset,
             }
