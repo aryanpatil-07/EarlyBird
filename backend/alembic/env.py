@@ -23,6 +23,8 @@ database_url = os.getenv(
     "DATABASE_URL",
     "postgresql://earlybird:earlybird_dev@localhost:5432/earlybird_db"
 )
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
 config.set_main_option("sqlalchemy.url", database_url)
 
 # Target metadata for autogenerate
