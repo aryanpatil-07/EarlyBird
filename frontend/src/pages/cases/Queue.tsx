@@ -179,9 +179,9 @@ export const CaseQueue: React.FC = () => {
       )}
 
       {/* Filter and Search Controls Toolbar */}
-      <div className="p-2.5 rounded-2xl bg-[#111218] border border-white/[0.06] flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between shadow-lg">
+      <div className="p-3 rounded-2xl bg-[#0E1019]/90 border border-slate-800/60 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between shadow-xl">
         {/* State Filter Tabs (Light Blue Segmented Control) */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-[#08090C] border border-white/[0.04]">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-[#08090C] border border-slate-800/50">
           {(['ALL', 'NEW', 'ESCALATED', 'RESOLVED'] as StateFilter[]).map((tab) => (
             <button
               key={tab}
@@ -192,7 +192,7 @@ export const CaseQueue: React.FC = () => {
               className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 stateFilter === tab
                   ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
               }`}
             >
               {tab === 'ALL' ? 'All Alerts' : tab}
@@ -212,7 +212,7 @@ export const CaseQueue: React.FC = () => {
                 setSearchEntity(e.target.value);
                 setPage(0);
               }}
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-[#08090C] border border-white/[0.06] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all"
+              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-[#08090C] border border-slate-800/60 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all shadow-inner"
             />
           </div>
 
@@ -220,7 +220,7 @@ export const CaseQueue: React.FC = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortField)}
-              className="px-3 py-1.5 text-xs rounded-xl bg-[#08090C] border border-white/[0.06] text-slate-300 focus:outline-none focus:border-sky-500/50 cursor-pointer appearance-none pr-7"
+              className="px-3.5 py-1.5 text-xs rounded-xl bg-[#08090C] border border-slate-800/60 text-slate-300 focus:outline-none focus:border-sky-500/50 cursor-pointer appearance-none pr-8 font-medium"
             >
               <option value="sla">SLA (Urgent First)</option>
               <option value="created_at">Newest First</option>
@@ -233,14 +233,14 @@ export const CaseQueue: React.FC = () => {
 
       {/* Error Banner */}
       {error && (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-4 text-xs text-rose-300">
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-950/20 p-4 text-xs text-rose-300 shadow-sm">
           {error}
         </div>
       )}
 
       {/* Loading Skeleton */}
       {loading && (
-        <div className="rounded-2xl border border-white/[0.06] bg-[#111218] p-12 text-center shadow-xl">
+        <div className="rounded-2xl border border-slate-800/60 bg-[#0E1019]/90 p-12 text-center shadow-xl">
           <div className="inline-block h-7 w-7 animate-spin rounded-full border-2 border-sky-500/30 border-t-sky-500 mb-3" />
           <p className="text-xs text-slate-400 font-medium">Scanning live anomaly queue...</p>
         </div>
@@ -250,7 +250,7 @@ export const CaseQueue: React.FC = () => {
       {!loading && cases.length > 0 && (
         <div
           ref={tableContainerRef}
-          className="rounded-2xl border border-white/[0.06] bg-[#111218] overflow-hidden shadow-2xl"
+          className="rounded-2xl lg:rounded-3xl border border-slate-800/60 bg-gradient-to-b from-[#11121C]/90 to-[#0C0D14]/90 overflow-hidden shadow-2xl"
         >
           <div className="w-full overflow-x-auto">
             <Table>

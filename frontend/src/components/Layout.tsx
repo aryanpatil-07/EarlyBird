@@ -30,7 +30,7 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
@@ -65,13 +65,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="flex h-screen w-screen overflow-hidden bg-[#08090C] text-slate-100 font-sans antialiased selection:bg-sky-500/30 selection:text-sky-200">
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0B0C10] border-r border-white/[0.06] transition-transform duration-300 md:relative md:translate-x-0 flex flex-col justify-between ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0B0C10]/95 backdrop-blur-xl border-r border-slate-800/50 transition-transform duration-300 md:relative md:translate-x-0 flex flex-col justify-between ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col flex-1 overflow-y-auto">
           {/* Logo Header */}
-          <div className="px-6 py-5 flex items-center justify-between border-b border-white/[0.04]">
+          <div className="px-6 py-5 flex items-center justify-between border-b border-slate-800/40">
             <div className="flex items-center gap-3">
               <EarlyBirdLogo size={36} className="h-9 w-9" />
               <div>
@@ -110,8 +110,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     }}
                     className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-3 cursor-pointer ${
                       active
-                        ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-500/25 border border-sky-400/20'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent'
+                        ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-500/25 border border-sky-400/30'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40 border border-transparent'
                     }`}
                   >
                     <Icon size={17} className={active ? 'text-white' : 'text-slate-400'} />
@@ -124,7 +124,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-3.5 border-t border-white/[0.05]">
+        <div className="p-3.5 border-t border-slate-800/40">
           {/* Logout Button */}
           <button
             onClick={handleLogout}
@@ -139,39 +139,28 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-[#08090C]">
         {/* Top Navbar */}
-        <header className="h-16 px-6 lg:px-8 flex items-center justify-between border-b border-white/[0.06] bg-[#08090C]/90 backdrop-blur-md sticky top-0 z-30">
-          {/* Left: Mobile Toggle + Breadcrumb Plan Pill */}
-          <div className="flex items-center gap-3">
+        <header className="h-16 px-6 lg:px-8 flex items-center justify-between gap-4 border-b border-slate-800/50 bg-[#08090C]/80 backdrop-blur-xl sticky top-0 z-30">
+          {/* Left: Mobile Toggle */}
+          <div className="flex items-center md:hidden">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer"
+              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer"
             >
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="px-3 py-1.5 rounded-xl bg-[#12131A] border border-white/[0.08] hover:border-white/[0.15] text-xs font-semibold text-slate-200 flex items-center gap-2 transition-all cursor-pointer shadow-sm"
-              >
-                <Activity size={14} className="text-sky-400" />
-                <span>EarlyBird Core</span>
-                <ChevronDown size={13} className="text-slate-400" />
-              </button>
-            </div>
           </div>
 
-          {/* Middle: Integrated Search Bar */}
-          <div className="hidden sm:flex items-center">
-            <div className="relative w-64 md:w-80">
+          {/* Stretched Integrated Search Bar */}
+          <div className="flex-1 max-w-xl lg:max-w-2xl">
+            <div className="relative w-full">
               <Search
-                size={14}
+                size={15}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
               />
               <input
                 type="text"
-                placeholder="Search card, entity ID, or keyword..."
-                className="w-full pl-9 pr-3.5 py-1.5 text-xs rounded-xl bg-[#12131A] border border-white/[0.06] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/60 focus:ring-1 focus:ring-sky-500/30 transition-all"
+                placeholder="Search card, entity ID, or forensic keyword..."
+                className="w-full pl-10 pr-4 py-2 text-xs rounded-xl bg-[#11131F]/80 border border-slate-800/60 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/20 transition-all shadow-inner"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     navigate('/cases');
@@ -181,24 +170,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </div>
 
-          {/* Right: Unified User Profile & Role Switcher Pill */}
+          {/* Right: User Profile Pill */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 p-1.5 pl-2.5 pr-2 rounded-2xl bg-[#12131A] border border-white/[0.08] shadow-sm">
+            <div className="flex items-center gap-3 p-1.5 pl-2.5 pr-3.5 rounded-2xl bg-[#11131F]/80 border border-slate-800/60 shadow-sm">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 to-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-inner">
                 {userInitials}
               </div>
-              <div className="hidden md:block text-left pr-1">
+              <div className="text-left pr-1">
                 <div className="text-xs font-bold text-white leading-tight">{userName}</div>
                 <div className="text-[10px] text-slate-400 font-medium">{userRoleSubtitle}</div>
               </div>
-              <button
-                onClick={() => switchRole()}
-                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
-                title="Switch persona between Reviewer and Team Lead"
-              >
-                <ArrowRightLeft size={12} />
-                <span className="hidden sm:inline">Switch</span>
-              </button>
             </div>
           </div>
         </header>

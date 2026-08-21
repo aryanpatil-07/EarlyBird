@@ -32,19 +32,25 @@ async def lifespan(app: FastAPI):
     
     # Startup: Initialize database, default users, and scheduler
     try:
+        init_db()
         from app.models import User
         from app.database import SessionLocal
         with SessionLocal() as db_session:
-            if db_session.query(User).count() == 0:
-                logger.info("Seeding default demo users (Reviewer & Team Lead)...")
-                db_session.add_all([
-                    User(user_id="1", name="Reviewer Alex", role="REVIEWER", is_active=True),
-                    User(user_id="2", name="Team Lead Sarah", role="TEAM_LEAD", is_active=True),
-                ])
-                db_session.commit()
-                logger.info("Demo users seeded successfully.")
+            demo_users = [
+                ("1", "Reviewer Alex", "REVIEWER"),
+                ("2", "Team Lead Sarah", "TEAM_LEAD"),
+                ("12345", "Reviewer 12345", "REVIEWER"),
+                ("67890", "Team Lead 67890", "TEAM_LEAD"),
+                ("system", "System User", "TEAM_LEAD"),
+            ]
+            for uid, name, role in demo_users:
+                existing = db_session.query(User).filter(User.user_id == uid).first()
+                if not existing:
+                    db_session.add(User(user_id=uid, name=name, role=role, is_active=True))
+            db_session.commit()
+            logger.info("Demo users verified/seeded successfully.")
     except Exception as e:
-        logger.warning(f"Demo user check: {e}")
+        logger.warning(f"Database/demo user initialization: {e}")
 
     try:
         # Start detection cycle: every 5 minutes
@@ -93,7 +99,15 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:[0-9]+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -47,8 +47,32 @@ def search_knowledge_base(
     # Clean query
     query_clean = query.strip().lower()
     
-    # Use plainto_tsquery for safe, natural keyword search
-    # plainto_tsquery: converts plain text to tsvector query, handles spaces & punctuation
+    # SQLite fallback for unit tests / non-PostgreSQL environments
+    if db.bind and db.bind.dialect.name != "postgresql":
+        from app.models import KnowledgeBase
+        records = (
+            db.query(KnowledgeBase)
+            .filter(
+                (KnowledgeBase.title.ilike(f"%{query_clean}%"))
+                | (KnowledgeBase.content.ilike(f"%{query_clean}%"))
+            )
+            .order_by(KnowledgeBase.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+        return [
+            {
+                "id": r.id,
+                "case_id": r.case_id,
+                "title": r.title,
+                "created_at": r.created_at,
+                "relevance_score": 1.0,
+            }
+            for r in records
+        ]
+
+    # Use plainto_tsquery for safe, natural keyword search on PostgreSQL
     search_sql = text("""
         SELECT 
             id,

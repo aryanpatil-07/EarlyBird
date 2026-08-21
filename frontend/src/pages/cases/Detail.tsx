@@ -16,7 +16,7 @@ import {
   SLA_WINDOW_MS,
   SEVERITY_COLORS,
 } from '../../lib/constants';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../context/AuthContext';
 import {
   ChevronLeft,
   Check,
@@ -69,6 +69,7 @@ interface DecisionSummary {
 
 interface CaseDetailData {
   id: string;
+  case_id?: string;
   entity_id: string;
   anomaly_score: number;
   baseline_mean: number;
@@ -357,7 +358,7 @@ export const CaseDetail: React.FC = () => {
               <span>Take Decision</span>
             </button>
           )}
-          {!isEscalated && !isResolved && (
+          {!isEscalated && !isResolved && user?.role !== 'TEAM_LEAD' && (
             <button
               onClick={() => { setModalError(null); setIsEscalateModalOpen(true); }}
               disabled={actingOn !== null}
@@ -455,7 +456,13 @@ export const CaseDetail: React.FC = () => {
             </div>
           </div>
           <button
-            onClick={() => navigate(`/knowledge-base/${data.knowledge_base_entry!.id}`)}
+            onClick={() => {
+              if (data.knowledge_base_entry?.id) {
+                navigate(`/knowledge-base/${data.knowledge_base_entry.id}`);
+              } else {
+                navigate(`/knowledge-base?case=${data.id || caseId || ''}`);
+              }
+            }}
             className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-[#12131A] hover:bg-[#181A24] text-slate-200 border border-white/[0.08] transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <LinkIcon className="h-3.5 w-3.5" />
